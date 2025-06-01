@@ -1,0 +1,6 @@
+datasets
+.env
+env
+uploads
+*/__pycache__
+*/*/__pycache__/
