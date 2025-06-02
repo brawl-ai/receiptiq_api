@@ -1,927 +1,45 @@
 {
-    "openapi": "3.1.0",
-    "info": {
-      "title": "ReceiptIQ API",
-      "version": "1.0.0"
-    },
-    "paths": {
-      "/api/v1/auth/register": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Register",
-          "description": "Register a new user",
-          "operationId": "register_api_v1_auth_register_post",
-          "requestBody": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserCreate"
-                }
-              }
-            },
-            "required": true
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/UserResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/auth/verify-code": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Request Verification Code",
-          "description": "Request a new verification code",
-          "operationId": "request_verification_code_api_v1_auth_verify_code_post",
-          "requestBody": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VerificationCodeRequest"
-                }
-              }
-            },
-            "required": true
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/VerificationCodeResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/auth/verify": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Verify Code",
-          "description": "Verify user's email with the verification code",
-          "operationId": "verify_code_api_v1_auth_verify_post",
-          "requestBody": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VerifyCodeRequest"
-                }
-              }
-            },
-            "required": true
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/TokenResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/auth/login": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Request Login Otp",
-          "description": "Request OTP for login",
-          "operationId": "request_login_otp_api_v1_auth_login_post",
-          "requestBody": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LoginRequest"
-                }
-              }
-            },
-            "required": true
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/VerificationCodeResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/auth/token": {
-        "post": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Login With Otp",
-          "description": "Login with email and OTP to get access token",
-          "operationId": "login_with_otp_api_v1_auth_token_post",
-          "requestBody": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VerifyCodeRequest"
-                }
-              }
-            },
-            "required": true
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/TokenResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/auth/me": {
-        "get": {
-          "tags": [
-            "auth"
-          ],
-          "summary": "Read Users Me",
-          "description": "Get current user information",
-          "operationId": "read_users_me_api_v1_auth_me_get",
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/UserResponse"
-                  }
-                }
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ReceiptIQ API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Register",
+        "description": "Register a new user",
+        "operationId": "register_api_v1_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserCreate"
               }
             }
           },
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ]
-        }
-      },
-      "/api/v1/projects": {
-        "get": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "List Projects",
-          "description": "List all projects owned by the current user",
-          "operationId": "list_projects_api_v1_projects_get",
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "items": {
-                      "$ref": "#/components/schemas/ProjectResponse"
-                    },
-                    "type": "array",
-                    "title": "Response List Projects Api V1 Projects Get"
-                  }
-                }
-              }
-            }
-          },
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ]
+          "required": true
         },
-        "post": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Create Project",
-          "description": "Create a new project",
-          "operationId": "create_project_api_v1_projects_post",
-          "requestBody": {
+        "responses": {
+          "200": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectCreate"
-                }
-              }
-            },
-            "required": true
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/ProjectResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
+                  "$ref": "#/components/schemas/UserResponse"
                 }
               }
             }
           },
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ]
-        }
-      },
-      "/api/v1/projects/{project_id}": {
-        "get": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Get Project",
-          "description": "Get a specific project by ID",
-          "operationId": "get_project_api_v1_projects__project_id__get",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/ProjectResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "put": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Update Project",
-          "description": "Update a project",
-          "operationId": "update_project_api_v1_projects__project_id__put",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
+          "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProjectUpdate"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/ProjectResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "delete": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Delete Project",
-          "description": "Delete a project",
-          "operationId": "delete_project_api_v1_projects__project_id__delete",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            }
-          ],
-          "responses": {
-            "204": {
-              "description": "Successful Response"
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/projects/{project_id}/schemas": {
-        "post": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Create Schema",
-          "description": "Create a new schema in a project",
-          "operationId": "create_schema_api_v1_projects__project_id__schemas_post",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SchemaCreate"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/SchemaResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "get": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "List Schemas",
-          "description": "List all schemas in a project",
-          "operationId": "list_schemas_api_v1_projects__project_id__schemas_get",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/SchemaResponse"
-                    },
-                    "title": "Response List Schemas Api V1 Projects  Project Id  Schemas Get"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/projects/{project_id}/schemas/{schema_name}/fields": {
-        "post": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Add Field To Schema",
-          "description": "Add a new field to a schema",
-          "operationId": "add_field_to_schema_api_v1_projects__project_id__schemas__schema_name__fields_post",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            },
-            {
-              "name": "schema_name",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "title": "Schema Name"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AddFieldToSchemaRequest"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/FieldResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/projects/{project_id}/receipts": {
-        "post": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Create Receipt",
-          "description": "Create a new receipt in a project",
-          "operationId": "create_receipt_api_v1_projects__project_id__receipts_post",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            },
-            {
-              "name": "schema_id",
-              "in": "query",
-              "required": false,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Schema Id"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "multipart/form-data": {
-                "schema": {
-                  "$ref": "#/components/schemas/Body_create_receipt_api_v1_projects__project_id__receipts_post"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/ReceiptResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "get": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "List Receipts",
-          "description": "List all receipts in a project, optionally filtered by status",
-          "operationId": "list_receipts_api_v1_projects__project_id__receipts_get",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            },
-            {
-              "name": "status",
-              "in": "query",
-              "required": false,
-              "schema": {
-                "type": "string",
-                "title": "Status"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/ReceiptResponse"
-                    },
-                    "title": "Response List Receipts Api V1 Projects  Project Id  Receipts Get"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/projects/{project_id}/receipts/{receipt_id}/status": {
-        "put": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Update Receipt Status",
-          "description": "Update a receipt's status",
-          "operationId": "update_receipt_status_api_v1_projects__project_id__receipts__receipt_id__status_put",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            },
-            {
-              "name": "receipt_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Receipt Id"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReceiptStatusUpdate"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/ReceiptResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/api/v1/projects/{project_id}/receipts/{receipt_id}/data": {
-        "put": {
-          "tags": [
-            "projects"
-          ],
-          "summary": "Update Receipt Data",
-          "description": "Update a receipt's data value",
-          "operationId": "update_receipt_data_api_v1_projects__project_id__receipts__receipt_id__data_put",
-          "security": [
-            {
-              "OAuth2PasswordBearer": []
-            }
-          ],
-          "parameters": [
-            {
-              "name": "project_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Project Id"
-              }
-            },
-            {
-              "name": "receipt_id",
-              "in": "path",
-              "required": true,
-              "schema": {
-                "type": "string",
-                "format": "uuid",
-                "title": "Receipt Id"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReceiptDataValueUpdate"
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/DataValueResponse"
-                  }
-                }
-              }
-            },
-            "422": {
-              "description": "Validation Error",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "$ref": "#/components/schemas/HTTPValidationError"
-                  }
-                }
-              }
-            }
-          }
-        }
-      },
-      "/": {
-        "get": {
-          "summary": "Root",
-          "description": "Root endpoint",
-          "operationId": "root__get",
-          "responses": {
-            "200": {
-              "description": "Successful Response",
-              "content": {
-                "application/json": {
-                  "schema": {
-  
-                  }
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
@@ -929,835 +47,1783 @@
         }
       }
     },
-    "components": {
-      "schemas": {
-        "AddFieldToSchemaRequest": {
-          "properties": {
-            "field_name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Field Name"
-            },
-            "field_type": {
-              "$ref": "#/components/schemas/FieldType"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
+    "/api/v1/auth/verify-code": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request Verification Code",
+        "description": "Request a new verification code",
+        "operationId": "request_verification_code_api_v1_auth_verify_code_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationCodeResponse"
                 }
-              ],
-              "title": "Description"
+              }
             }
           },
-          "type": "object",
-          "required": [
-            "field_name",
-            "field_type"
-          ],
-          "title": "AddFieldToSchemaRequest"
-        },
-        "Body_create_receipt_api_v1_projects__project_id__receipts_post": {
-          "properties": {
-            "file": {
-              "type": "string",
-              "format": "binary",
-              "title": "File"
-            }
-          },
-          "type": "object",
-          "required": [
-            "file"
-          ],
-          "title": "Body_create_receipt_api_v1_projects__project_id__receipts_post"
-        },
-        "DataValueResponse": {
-          "properties": {
-            "value": {
-              "additionalProperties": true,
-              "type": "object",
-              "title": "Value",
-              "description": "The actual value stored in a flexible format"
-            },
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            },
-            "field": {
-              "$ref": "#/components/schemas/FieldResponse"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Created At"
-            },
-            "updated_at": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              ],
-              "title": "Updated At"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/verify": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Verify Code",
+        "description": "Verify user's email with the verification code",
+        "operationId": "verify_code_api_v1_auth_verify_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodeRequest"
+              }
             }
           },
-          "type": "object",
-          "required": [
-            "value",
-            "id",
-            "field",
-            "created_at"
-          ],
-          "title": "DataValueResponse"
+          "required": true
         },
-        "FieldCreate": {
-          "properties": {
-            "name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Name"
-            },
-            "field_type": {
-              "$ref": "#/components/schemas/FieldType"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
                 }
-              ],
-              "title": "Description"
+              }
             }
           },
-          "type": "object",
-          "required": [
-            "name",
-            "field_type"
-          ],
-          "title": "FieldCreate"
-        },
-        "FieldResponse": {
-          "properties": {
-            "name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Name"
-            },
-            "field_type": {
-              "$ref": "#/components/schemas/FieldType"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              ],
-              "title": "Description"
-            },
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Created At"
-            },
-            "updated_at": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Request Login Otp",
+        "description": "Request OTP for login",
+        "operationId": "request_login_otp_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationCodeResponse"
                 }
-              ],
-              "title": "Updated At"
+              }
             }
           },
-          "type": "object",
-          "required": [
-            "name",
-            "field_type",
-            "id",
-            "created_at"
-          ],
-          "title": "FieldResponse"
-        },
-        "FieldType": {
-          "type": "string",
-          "enum": [
-            "string",
-            "number",
-            "date",
-            "boolean",
-            "object",
-            "array"
-          ],
-          "title": "FieldType"
-        },
-        "HTTPValidationError": {
-          "properties": {
-            "detail": {
-              "items": {
-                "$ref": "#/components/schemas/ValidationError"
-              },
-              "type": "array",
-              "title": "Detail"
-            }
-          },
-          "type": "object",
-          "title": "HTTPValidationError"
-        },
-        "LoginRequest": {
-          "properties": {
-            "email": {
-              "type": "string",
-              "format": "email",
-              "title": "Email"
-            }
-          },
-          "type": "object",
-          "required": [
-            "email"
-          ],
-          "title": "LoginRequest"
-        },
-        "PermissionResponse": {
-          "properties": {
-            "name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Name"
-            },
-            "codename": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Codename"
-            },
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Created At"
-            },
-            "updated_at": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              ],
-              "title": "Updated At"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Login With Otp",
+        "description": "Login with email and OTP to get access token",
+        "operationId": "login_with_otp_api_v1_auth_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyCodeRequest"
+              }
             }
           },
-          "type": "object",
-          "required": [
-            "name",
-            "codename",
-            "id",
-            "created_at"
-          ],
-          "title": "PermissionResponse"
+          "required": true
         },
-        "ProjectCreate": {
-          "properties": {
-            "name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Name"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
                 }
-              ],
-              "title": "Description"
+              }
             }
           },
-          "type": "object",
-          "required": [
-            "name"
-          ],
-          "title": "ProjectCreate"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Read Users Me",
+        "description": "Get current user information",
+        "operationId": "read_users_me_api_v1_auth_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserResponse"
+                }
+              }
+            }
+          }
         },
-        "ProjectResponse": {
-          "properties": {
-            "name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Name"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/projects": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Projects",
+        "description": "List all projects owned by the current user",
+        "operationId": "list_projects_api_v1_projects_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectResponse"
+                  },
+                  "type": "array",
+                  "title": "Response List Projects Api V1 Projects Get"
                 }
-              ],
-              "title": "Description"
-            },
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            },
-            "owner_id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Owner Id"
-            },
-            "schemas": {
-              "items": {
-                "$ref": "#/components/schemas/SchemaResponse"
-              },
-              "type": "array",
-              "title": "Schemas"
-            },
-            "receipts": {
-              "items": {
-                "$ref": "#/components/schemas/ReceiptResponse"
-              },
-              "type": "array",
-              "title": "Receipts"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Created At"
-            },
-            "updated_at": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Updated At"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create Project",
+        "description": "Create a new project",
+        "operationId": "create_project_api_v1_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectCreate"
+              }
             }
           },
-          "type": "object",
-          "required": [
-            "name",
-            "id",
-            "owner_id",
-            "schemas",
-            "receipts",
-            "created_at"
-          ],
-          "title": "ProjectResponse"
+          "required": true
         },
-        "ProjectUpdate": {
-          "properties": {
-            "name": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 100,
-                  "minLength": 1
-                },
-                {
-                  "type": "null"
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
                 }
-              ],
-              "title": "Name"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Description"
+              }
             }
           },
-          "type": "object",
-          "title": "ProjectUpdate"
-        },
-        "ReceiptDataValueUpdate": {
-          "properties": {
-            "field_name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Field Name"
-            },
-            "value": {
-              "additionalProperties": true,
-              "type": "object",
-              "title": "Value",
-              "description": "The actual value stored in a flexible format"
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
             }
-          },
-          "type": "object",
-          "required": [
-            "field_name",
-            "value"
-          ],
-          "title": "ReceiptDataValueUpdate"
+          }
         },
-        "ReceiptResponse": {
-          "properties": {
-            "file_name": {
-              "type": "string",
-              "maxLength": 255,
-              "minLength": 1,
-              "title": "File Name"
-            },
-            "mime_type": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Mime Type"
-            },
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            },
-            "project_id": {
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/projects/{project_id}": {
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Get Project",
+        "description": "Get a specific project by ID",
+        "operationId": "get_project_api_v1_projects__project_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
               "type": "string",
               "format": "uuid",
               "title": "Project Id"
-            },
-            "schema": {
-              "$ref": "#/components/schemas/SchemaResponse"
-            },
-            "file_path": {
-              "type": "string",
-              "title": "File Path"
-            },
-            "status": {
-              "type": "string",
-              "title": "Status"
-            },
-            "error_message": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
                 }
-              ],
-              "title": "Error Message"
-            },
-            "data_values": {
-              "items": {
-                "$ref": "#/components/schemas/DataValueResponse"
-              },
-              "type": "array",
-              "title": "Data Values",
-              "default": []
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Created At"
-            },
-            "updated_at": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
-              ],
-              "title": "Updated At"
+              }
             }
-          },
-          "type": "object",
-          "required": [
-            "file_name",
-            "mime_type",
-            "id",
-            "project_id",
-            "file_path",
-            "status",
-            "created_at"
-          ],
-          "title": "ReceiptResponse"
-        },
-        "ReceiptStatusUpdate": {
-          "properties": {
-            "status": {
-              "type": "string",
-              "title": "Status",
-              "choices": [
-                "pending",
-                "processing",
-                "completed",
-                "failed"
-              ]
-            },
-            "error_message": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Error Message"
-            }
-          },
-          "type": "object",
-          "required": [
-            "status"
-          ],
-          "title": "ReceiptStatusUpdate"
-        },
-        "SchemaCreate": {
-          "properties": {
-            "name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Name"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Description"
-            },
-            "fields": {
-              "anyOf": [
-                {
-                  "items": {
-                    "$ref": "#/components/schemas/FieldCreate"
-                  },
-                  "type": "array"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Fields"
-            }
-          },
-          "type": "object",
-          "required": [
-            "name"
-          ],
-          "title": "SchemaCreate"
-        },
-        "SchemaResponse": {
-          "properties": {
-            "name": {
-              "type": "string",
-              "maxLength": 100,
-              "minLength": 1,
-              "title": "Name"
-            },
-            "description": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "maxLength": 500
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Description"
-            },
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            },
-            "fields": {
-              "items": {
-                "$ref": "#/components/schemas/FieldResponse"
-              },
-              "type": "array",
-              "title": "Fields"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Created At"
-            },
-            "updated_at": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Updated At"
-            }
-          },
-          "type": "object",
-          "required": [
-            "name",
-            "id",
-            "fields",
-            "created_at"
-          ],
-          "title": "SchemaResponse"
-        },
-        "TokenResponse": {
-          "properties": {
-            "access_token": {
-              "type": "string",
-              "title": "Access Token"
-            },
-            "token_type": {
-              "type": "string",
-              "title": "Token Type",
-              "default": "bearer"
-            }
-          },
-          "type": "object",
-          "required": [
-            "access_token"
-          ],
-          "title": "TokenResponse"
-        },
-        "UserCreate": {
-          "properties": {
-            "email": {
-              "type": "string",
-              "format": "email",
-              "title": "Email"
-            },
-            "first_name": {
-              "type": "string",
-              "title": "First Name"
-            },
-            "last_name": {
-              "type": "string",
-              "title": "Last Name"
-            }
-          },
-          "type": "object",
-          "required": [
-            "email",
-            "first_name",
-            "last_name"
-          ],
-          "title": "UserCreate"
-        },
-        "UserResponse": {
-          "properties": {
-            "email": {
-              "type": "string",
-              "format": "email",
-              "title": "Email"
-            },
-            "first_name": {
-              "type": "string",
-              "title": "First Name"
-            },
-            "last_name": {
-              "type": "string",
-              "title": "Last Name"
-            },
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Id"
-            },
-            "is_active": {
-              "type": "boolean",
-              "title": "Is Active"
-            },
-            "is_verified": {
-              "type": "boolean",
-              "title": "Is Verified"
-            },
-            "created_at": {
-              "type": "string",
-              "format": "date-time",
-              "title": "Created At"
-            },
-            "updated_at": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "date-time"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Updated At"
-            },
-            "permissions": {
-              "items": {
-                "$ref": "#/components/schemas/PermissionResponse"
-              },
-              "type": "array",
-              "title": "Permissions",
-              "default": []
-            }
-          },
-          "type": "object",
-          "required": [
-            "email",
-            "first_name",
-            "last_name",
-            "id",
-            "is_active",
-            "is_verified",
-            "created_at"
-          ],
-          "title": "UserResponse"
-        },
-        "ValidationError": {
-          "properties": {
-            "loc": {
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "integer"
-                  }
-                ]
-              },
-              "type": "array",
-              "title": "Location"
-            },
-            "msg": {
-              "type": "string",
-              "title": "Message"
-            },
-            "type": {
-              "type": "string",
-              "title": "Error Type"
-            }
-          },
-          "type": "object",
-          "required": [
-            "loc",
-            "msg",
-            "type"
-          ],
-          "title": "ValidationError"
-        },
-        "VerificationCodeRequest": {
-          "properties": {
-            "email": {
-              "type": "string",
-              "format": "email",
-              "title": "Email"
-            }
-          },
-          "type": "object",
-          "required": [
-            "email"
-          ],
-          "title": "VerificationCodeRequest"
-        },
-        "VerificationCodeResponse": {
-          "properties": {
-            "message": {
-              "type": "string",
-              "title": "Message",
-              "default": "Verification code sent successfully"
-            }
-          },
-          "type": "object",
-          "title": "VerificationCodeResponse"
-        },
-        "VerifyCodeRequest": {
-          "properties": {
-            "email": {
-              "type": "string",
-              "format": "email",
-              "title": "Email"
-            },
-            "code": {
-              "type": "string",
-              "maxLength": 5,
-              "minLength": 5,
-              "title": "Code"
-            }
-          },
-          "type": "object",
-          "required": [
-            "email",
-            "code"
-          ],
-          "title": "VerifyCodeRequest"
+          }
         }
       },
-      "securitySchemes": {
-        "OAuth2PasswordBearer": {
-          "type": "oauth2",
-          "flows": {
-            "password": {
-              "scopes": {
-  
-              },
-              "tokenUrl": "auth/token"
+      "put": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update Project",
+        "description": "Update a project",
+        "operationId": "update_project_api_v1_projects__project_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProjectUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Delete Project",
+        "description": "Delete a project",
+        "operationId": "delete_project_api_v1_projects__project_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/schemas": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create Schema",
+        "description": "Create a new schema in a project",
+        "operationId": "create_schema_api_v1_projects__project_id__schemas_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchemaCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SchemaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Schemas",
+        "description": "List all schemas in a project",
+        "operationId": "list_schemas_api_v1_projects__project_id__schemas_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SchemaResponse"
+                  },
+                  "title": "Response List Schemas Api V1 Projects  Project Id  Schemas Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/schemas/{schema_id}/fields": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Add Field To Schema",
+        "description": "Add a new field to a schema",
+        "operationId": "add_field_to_schema_api_v1_projects__project_id__schemas__schema_id__fields_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "schema_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Schema Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFieldToSchemaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/receipts": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Create Receipt",
+        "description": "Create a new receipt in a project",
+        "operationId": "create_receipt_api_v1_projects__project_id__receipts_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "schema_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Schema Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_receipt_api_v1_projects__project_id__receipts_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "List Receipts",
+        "description": "List all receipts in a project, optionally filtered by status",
+        "operationId": "list_receipts_api_v1_projects__project_id__receipts_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReceiptResponse"
+                  },
+                  "title": "Response List Receipts Api V1 Projects  Project Id  Receipts Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/receipts/{receipt_id}/status": {
+      "put": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update Receipt Status",
+        "description": "Update a receipt's status",
+        "operationId": "update_receipt_status_api_v1_projects__project_id__receipts__receipt_id__status_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "receipt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Receipt Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptStatusUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/receipts/{receipt_id}/data": {
+      "put": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Update Receipt Data",
+        "description": "Update a receipt's data value",
+        "operationId": "update_receipt_data_api_v1_projects__project_id__receipts__receipt_id__data_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "receipt_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Receipt Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptDataValueUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataValueResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/process": {
+      "post": {
+        "tags": [
+          "projects"
+        ],
+        "summary": "Process",
+        "description": "Process each \"pending\" receipt in the project",
+        "operationId": "process_api_v1_projects__project_id__process_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReceiptResponse"
+                  },
+                  "title": "Response Process Api V1 Projects  Project Id  Process Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1": {
+      "get": {
+        "summary": "Root",
+        "description": "Root endpoint",
+        "operationId": "root_api_v1_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
             }
           }
         }
       }
     }
+  },
+  "components": {
+    "schemas": {
+      "AddFieldToSchemaRequest": {
+        "properties": {
+          "field_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Field Name"
+          },
+          "field_type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_name",
+          "field_type"
+        ],
+        "title": "AddFieldToSchemaRequest"
+      },
+      "Body_create_receipt_api_v1_projects__project_id__receipts_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_create_receipt_api_v1_projects__project_id__receipts_post"
+      },
+      "DataValueResponse": {
+        "properties": {
+          "value": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Value",
+            "description": "The actual value stored in a flexible format"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "field": {
+            "$ref": "#/components/schemas/FieldResponse"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "id",
+          "field",
+          "created_at"
+        ],
+        "title": "DataValueResponse"
+      },
+      "FieldCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "field_type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "field_type"
+        ],
+        "title": "FieldCreate"
+      },
+      "FieldResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "field_type": {
+            "$ref": "#/components/schemas/FieldType"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "field_type",
+          "id",
+          "created_at"
+        ],
+        "title": "FieldResponse"
+      },
+      "FieldType": {
+        "type": "string",
+        "enum": [
+          "string",
+          "number",
+          "date",
+          "boolean",
+          "object",
+          "array"
+        ],
+        "title": "FieldType"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "LoginRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "LoginRequest"
+      },
+      "PermissionResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "codename": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Codename"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "codename",
+          "id",
+          "created_at"
+        ],
+        "title": "PermissionResponse"
+      },
+      "ProjectCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "ProjectCreate"
+      },
+      "ProjectResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "schemas": {
+            "items": {
+              "$ref": "#/components/schemas/SchemaResponse"
+            },
+            "type": "array",
+            "title": "Schemas"
+          },
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptResponse"
+            },
+            "type": "array",
+            "title": "Receipts"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/UserBase"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "schemas",
+          "receipts",
+          "owner",
+          "created_at"
+        ],
+        "title": "ProjectResponse"
+      },
+      "ProjectUpdate": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "ProjectUpdate"
+      },
+      "ReceiptDataValueUpdate": {
+        "properties": {
+          "field_name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Field Name"
+          },
+          "value": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Value",
+            "description": "The actual value stored in a flexible format"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field_name",
+          "value"
+        ],
+        "title": "ReceiptDataValueUpdate"
+      },
+      "ReceiptResponse": {
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "File Name"
+          },
+          "mime_type": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Mime Type"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "schema": {
+            "$ref": "#/components/schemas/SchemaResponse"
+          },
+          "file_path": {
+            "type": "string",
+            "title": "File Path"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          },
+          "data_values": {
+            "items": {
+              "$ref": "#/components/schemas/DataValueResponse"
+            },
+            "type": "array",
+            "title": "Data Values",
+            "default": []
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file_name",
+          "mime_type",
+          "id",
+          "file_path",
+          "status",
+          "created_at"
+        ],
+        "title": "ReceiptResponse"
+      },
+      "ReceiptStatusUpdate": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status",
+            "choices": [
+              "pending",
+              "processing",
+              "completed",
+              "failed"
+            ]
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "ReceiptStatusUpdate"
+      },
+      "SchemaCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FieldCreate"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "SchemaCreate"
+      },
+      "SchemaResponse": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/FieldResponse"
+            },
+            "type": "array",
+            "title": "Fields"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "id",
+          "fields",
+          "created_at"
+        ],
+        "title": "SchemaResponse"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token"
+        ],
+        "title": "TokenResponse"
+      },
+      "UserBase": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "first_name",
+          "last_name"
+        ],
+        "title": "UserBase"
+      },
+      "UserCreate": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "first_name",
+          "last_name"
+        ],
+        "title": "UserCreate"
+      },
+      "UserResponse": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "is_verified": {
+            "type": "boolean",
+            "title": "Is Verified"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "permissions": {
+            "items": {
+              "$ref": "#/components/schemas/PermissionResponse"
+            },
+            "type": "array",
+            "title": "Permissions",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "first_name",
+          "last_name",
+          "id",
+          "is_active",
+          "is_verified",
+          "created_at"
+        ],
+        "title": "UserResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerificationCodeRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email"
+        ],
+        "title": "VerificationCodeRequest"
+      },
+      "VerificationCodeResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "Verification code sent successfully"
+          }
+        },
+        "type": "object",
+        "title": "VerificationCodeResponse"
+      },
+      "VerifyCodeRequest": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "code": {
+            "type": "string",
+            "maxLength": 5,
+            "minLength": 5,
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "code"
+        ],
+        "title": "VerifyCodeRequest"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "auth/token"
+          }
+        }
+      }
+    }
   }
+}
