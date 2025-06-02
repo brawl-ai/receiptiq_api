@@ -232,12 +232,6 @@ async def create_receipt(
             detail="Not authorized to create receipts in this project"
         )
     schema: Schema = Schema.objects.get(id=schema_id)
-    if not schema or schema not in project.schemas:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Schema not found in project"
-        )
-
     try:
         file_path, file_name = await save_upload_file(file, project_id)
     except Exception as e:
@@ -384,13 +378,12 @@ async def process(
         model_name="gpt-4.1-nano-2025-04-14",
         api_key=settings.OPENAI_API_KEY
     )
-    if len(project.schemas) == 0:
+    if not project.schema:
         raise Exception("No schema was found for this project. Please define a schema and fields before continuing")
-    schema_fields = project.schemas[0].fields()
+    schema_fields = project.schema.fields()
     schema = {field.name: {"type": field.field_type, "description": field.description } for field in schema_fields}
     for receipt in project.receipts:
         if receipt.status == "pending":
             receipt.process(extractor, schema)
         
     return project.receipts
-
