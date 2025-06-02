@@ -165,7 +165,7 @@ class Project(Document):
     name = StringField(required=True, max_length=100)
     description = StringField(max_length=500)
     owner = ReferenceField(User, required=True, reverse_delete_rule='CASCADE')
-    schemas = ListField(ReferenceField(Schema, reverse_delete_rule='CASCADE'))
+    schema = ReferenceField(Schema, reverse_delete_rule='CASCADE')
     receipts = ListField(ReferenceField(Receipt, reverse_delete_rule='CASCADE'))
     created_at = DateTimeField(default=datetime.datetime.now)
     updated_at = DateTimeField()
@@ -188,32 +188,19 @@ class Project(Document):
             description=description
         )
         schema.save()
-        self.schemas.append(schema)
+        self.schema = schema
         self.save()
         return schema
-
-    def get_schema_by_id(self, schema_id: uuid.UUID) -> Optional[Schema]:
-        """
-        Get a schema by its ID
-        """
-        for schema in self.schemas:
-            if schema.id == schema_id:
-                return schema
-        return None
 
     def add_field_to_schema(self, schema_id: uuid.UUID, field_name: str, field_type: FieldType, description: str = None) -> Optional[Field]:
         """
         Add a new field to a schema
         """
-        schema = self.get_schema_by_id(schema_id)
-        if not schema:
-            return None
-
         field = Field(
             name=field_name,
             field_type=field_type.value,
             description=description,
-            schema=schema
+            schema=self.schema
         )
         field.save()
         return field
@@ -222,12 +209,8 @@ class Project(Document):
         """
         Create a new data value for a field in a schema
         """
-        schema = self.get_schema_by_id(schema_id)
-        if not schema:
-            return None
-
         field = None
-        for f in schema.fields:
+        for f in self.schema.fields:
             if f.name == field_name:
                 field = f
                 break
@@ -246,12 +229,8 @@ class Project(Document):
         """
         Create a new receipt for the project
         """
-        schema = self.get_schema_by_id(schema_id)
-        if not schema:
-            return None
-
         receipt = Receipt(
-            schema=schema,
+            schema=self.schema,
             file_path=file_path,
             file_name=file_name,
             mime_type=mime_type

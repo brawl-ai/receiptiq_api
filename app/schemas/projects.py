@@ -85,7 +85,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: UUID
-    schemas: List[SchemaResponse]
+    schema: Optional[SchemaResponse]
     receipts: List[ReceiptResponse]
     owner: UserBase
     created_at: datetime
