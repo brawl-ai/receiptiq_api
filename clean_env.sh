@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Usage: ./clean_env.sh envs/.env .env.example
+# Usage: ./clean_env.sh .env .env.example
 
 INPUT_ENV_FILE=${1:-.env}
 OUTPUT_ENV_FILE=${2:-.env.example}
