@@ -8,8 +8,6 @@ from app.schemas.auth import (
 from app.utils import send_verification_email
 from app.depends import get_current_user
 from app.config import settings
-import jwt
-from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -78,12 +76,6 @@ async def verify_code(request: VerifyCodeRequest):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"
-        )
-
-    if user.is_verified:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User already verified"
         )
 
     is_valid = await user.validate_verification_code(request.code)
