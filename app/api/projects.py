@@ -1,23 +1,24 @@
+import csv
+import io
+from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from typing import List
+from typing import Dict, List
 from app.extractor import InvoiceExtractor
-from app.models.projects import Project, Schema, Field, DataValue, Receipt, FieldType
+from app.models.projects import Project, Schema, Receipt
 from app.schemas.projects import (
     ProjectCreate, ProjectResponse, ProjectUpdate,
     SchemaCreate, SchemaResponse,
-    FieldCreate, FieldResponse,
-    DataValueCreate, DataValueResponse,
-    ReceiptCreate, ReceiptResponse, ReceiptUpdate,
-    AddFieldToSchemaRequest, CreateDataValueRequest,
-    SchemaWithFieldsResponse, ReceiptWithDataResponse,
-    ReceiptStatusUpdate, ReceiptDataValueUpdate
+    FieldResponse,
+    DataValueResponse,
+    ReceiptResponse, AddFieldToSchemaRequest, ReceiptStatusUpdate, ReceiptDataValueUpdate
 )
 from app.depends import get_current_verified_user
 from app.models.auth import User
 from uuid import UUID
-from app.crud import project_service, schema_service, receipt_service
+from app.crud import project_service, schema_service
 from app.utils import save_upload_file
 from app.config import settings
+
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -387,3 +388,89 @@ async def process(
             receipt.process(extractor, schema)
         
     return project.receipts
+
+@router.get("/{project_id}/data", response_model=List[Dict])
+async def get_project_data(
+    project_id: UUID,
+    current_user: User= Depends(get_current_verified_user)
+):
+    """
+        Download receipt data
+    """
+    project: Project = Project.objects.get(id=project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    if project.owner != current_user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update receipt data in this project"
+        )
+    receipt_data = []
+    for receipt in project.receipts:
+        receipt_data.append({
+            "receipt_id": receipt.id,
+            "receipt_path": receipt.file_path,
+            "data": [
+                {
+                    "name": data_value.field.name,
+                    "description": data_value.field.description,
+                    "value": data_value.value
+                } for data_value in receipt.data_values
+            ]
+        })
+    return receipt_data
+
+@router.get("/{project_id}/data/csv")
+async def export_project_data_csv(
+    project_id: UUID,
+    current_user: User = Depends(get_current_verified_user)
+):
+    """
+    Export receipt data as a CSV file
+    """
+    project: Project = Project.objects.get(id=project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    if project.owner != current_user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to export data from this project"
+        )
+
+    # Create a StringIO object to write CSV data
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Get all field names from the schema
+    field_names = [field.name for field in project.schema.fields()]
+    
+    # Write header row
+    header = ["receipt_id", "receipt_path"] + field_names
+    writer.writerow(header)
+
+    # Write data rows
+    for receipt in project.receipts:
+        # Create a dictionary of field values for this receipt
+        field_values = {dv.field.name: dv.value for dv in receipt.data_values}
+        
+        # Create row with receipt info and field values
+        row = [str(receipt.id), receipt.file_path]
+        row.extend(field_values.get(field_name, "") for field_name in field_names)
+        
+        writer.writerow(row)
+
+    # Prepare the response
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=receipt_data_{project_id}.csv"
+        }
+    ) 
