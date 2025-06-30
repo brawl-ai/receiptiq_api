@@ -2,8 +2,14 @@ from datetime import datetime
 from typing import List, Optional, Any, Dict
 from uuid import UUID
 from pydantic import BaseModel, Field, ConfigDict
-from app.models.projects import FieldType
+from app.models.project_models import FieldType
 from .auth import UserBase
+
+class ListResponse(BaseModel):
+    total: int
+    page: int
+    size: int
+    data: List[Any]
 
 class FieldBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
@@ -15,21 +21,6 @@ class FieldCreate(FieldBase):
 
 class FieldResponse(FieldBase):
     id: UUID
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-
-    model_config = ConfigDict(from_attributes=True)
-
-class SchemaBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-    description: Optional[str] = Field(None, max_length=500)
-
-class SchemaCreate(SchemaBase):
-    fields: Optional[List[FieldCreate]] = None
-
-class SchemaResponse(SchemaBase):
-    id: UUID
-    fields: List[FieldResponse]
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -54,7 +45,7 @@ class ReceiptBase(BaseModel):
     mime_type: str = Field(..., min_length=1, max_length=100)
 
 class ReceiptCreate(ReceiptBase):
-    schema_id: UUID
+    pass
 
 class ReceiptUpdate(BaseModel):
     status: Optional[str] = Field(None, choices=['pending', 'processing', 'completed', 'failed'])
@@ -62,7 +53,6 @@ class ReceiptUpdate(BaseModel):
 
 class ReceiptResponse(ReceiptBase):
     id: UUID
-    schema: SchemaResponse
     file_path: str
     status: str
     error_message: Optional[str] = None
@@ -85,7 +75,6 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(ProjectBase):
     id: UUID
-    schema: Optional[SchemaResponse]
     receipts: List[ReceiptResponse]
     owner: UserBase
     created_at: datetime
@@ -94,7 +83,7 @@ class ProjectResponse(ProjectBase):
     model_config = ConfigDict(from_attributes=True)
 
 # Request/Response models for specific operations
-class AddFieldToSchemaRequest(BaseModel):
+class AddFieldToProjectRequest(BaseModel):
     field_name: str = Field(..., min_length=1, max_length=100)
     field_type: FieldType
     description: Optional[str] = Field(None, max_length=500)
@@ -102,9 +91,6 @@ class AddFieldToSchemaRequest(BaseModel):
 class CreateDataValueRequest(BaseModel):
     field_id: UUID
     value: Dict[str, Any] = Field(..., description="The actual value stored in a flexible format")
-
-class SchemaWithFieldsResponse(SchemaResponse):
-    project_id: UUID
 
 class ReceiptWithDataResponse(ReceiptResponse):
     """
@@ -117,5 +103,5 @@ class ReceiptStatusUpdate(BaseModel):
     error_message: Optional[str] = Field(None, max_length=500)
 
 class ReceiptDataValueUpdate(BaseModel):
-    field_name: str = Field(..., min_length=1, max_length=100)
+    field_id: UUID
     value: Dict[str, Any] = Field(..., description="The actual value stored in a flexible format")
