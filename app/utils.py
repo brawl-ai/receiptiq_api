@@ -1,25 +1,45 @@
+import hashlib
 import random
+import secrets
 import string
 from typing import Tuple
-import requests
-import os
 from fastapi import UploadFile
 from pathlib import Path
-
+import resend
 from .config import settings, logger
+
+resend.api_key = settings.resend_api_key
 
 def random_string(length: int = 5) -> str:
     """Generate a random string of fixed length"""
     letters = string.ascii_uppercase + string.digits
     return ''.join(random.choice(letters) for _ in range(length))
 
+def generate_reset_token(length: int = 32) -> str:
+    """Generate a cryptographically secure reset token"""
+    return secrets.token_urlsafe(length)
+
+def hash_token(token: str) -> str:
+    """Hash the token for secure storage"""
+    return hashlib.sha256(token.encode()).hexdigest()
+
 def send_email(to: Tuple[str,str], subject: str, message: str) -> bool:
     try:
-        pass
+        to_email,to_name = to
+        params: resend.Emails.SendParams = {
+            "from": settings.email_from,
+            "reply_to": [settings.email_reply_to],
+            "to": [f"{to_name} <{to_email}>"],
+            "subject": subject,
+            "html": message
+        }
+        email = resend.Emails.send(params)
+        logger.info(f"send_email response {email}")
     except Exception as e:
+        logger.error(e)
         raise e
     
-async def send_verification_email(email: str, verification_code: str):
+async def send_verification_email(name: str, email: str, verification_code: str):
     """
     Send verification email using Mailtrap
     """
@@ -30,7 +50,7 @@ async def send_verification_email(email: str, verification_code: str):
 
         Your verification code is: {verification_code}
 
-        This code will expire in {settings.VERIFICATION_CODE_EXPIRY_SECONDS // 60} minutes.
+        This code will expire in {settings.otp_expiry_seconds // 60} minutes.
 
         If you didn't request this verification code, please ignore this email.
 
@@ -39,7 +59,39 @@ async def send_verification_email(email: str, verification_code: str):
         """
         
         send_email(
-            to=(email, email.split('@')[0]),  # Use part before @ as name
+            to=(email, name),  # Use part before @ as name
+            subject=subject,
+            message=message
+        )
+    except Exception as e:
+        return False
+    
+async def send_password_reset_email(email: str, reset_token: str):
+    """
+    Send verification email using Mailtrap
+    """
+    reset_link = f"{settings.frontend_url}/reset-password?token={reset_token}"
+    try:
+        subject = "ReceiptIQ - Password Reset Request"
+        message = f"""
+        Hi,
+
+        You requested a password reset for your account.
+    
+        Click the link below to reset your password:
+        
+        {reset_link}
+        
+        This link will expire in {settings.password_reset_token_expiry_seconds // 60} minutes.
+
+        If you didn't request this reset, please ignore this email.
+
+        Best regards,
+        The ReceiptIQ Team
+        """
+        
+        send_email(
+            to=(email, email.split('@')[0]),
             subject=subject,
             message=message
         )

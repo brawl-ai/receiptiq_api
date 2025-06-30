@@ -1,29 +1,38 @@
 import logging
 from honeybadger.contrib import HoneybadgerHandler
 from pydantic_settings import BaseSettings
-from functools import lru_cache
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "ReceiptIQ API"
-    VERSION: str = "1.0.0"
-    API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = "your-secret-key-here"  # Change in production
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600  # 1 hour
-    VERIFICATION_CODE_LENGTH: int = 5
-    VERIFICATION_CODE_EXPIRY_SECONDS: int = 300  # 5 minutes
-    SMTP_HOST: str = "smtp.mailtrap.io"
-    MONGODB_URL: str = "mongodb://localhost:27017"
-    MONGODB_DB: str = "receiptiq"
-    MONGODB_USERNAME: str = ""
-    MONGODB_PASSWORD: str = ""
-    MONGODB_AUTH_SOURCE: str = "admin"
-    HONEYBADGER_API_KEY: str = ""
-    OPENAI_API_KEY: str = ""
+    project_name: str = "ReceiptIQ API"
+    version: str = "0.0.1"
+    api_v1_str: str = "/api/v1"
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expiry_seconds: int = 3600  # 1 hour
+    otp_length: int 
+    otp_expiry_seconds: int  = 300  # 5 minutes
+    password_reset_token_length: int = 32
+    password_reset_token_expiry_seconds: int = 300
+    refresh_token_length: int = 128
+    refresh_token_expiry_seconds: int = 2592000 # 30 days
+    frontend_url: str = ""
+    postgres_user: str 
+    postgres_password: str 
+    postgres_db: str 
+    postgres_host: str 
+    postgres_port: str
+    honeybadger_api_key: str = None
+    openai_api_key: str = None
+    client_id: str = None
+    client_secret: str = None
+    resend_api_key: str
+    email_from: str
+    email_reply_to: str
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    
+    @property
+    def database_url(self) -> str:
+        return f"postgresql://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
 
 settings = Settings()
 
@@ -35,8 +44,8 @@ logging.basicConfig(
 logger = logging.getLogger('honeybadger')
 
 # Configure Honeybadger
-if settings.HONEYBADGER_API_KEY:
-    hb_handler = HoneybadgerHandler(api_key=settings.HONEYBADGER_API_KEY)
+if settings.honeybadger_api_key:
+    hb_handler = HoneybadgerHandler(api_key=settings.honeybadger_api_key)
     hb_handler.setLevel(logging.DEBUG)
     hb_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(hb_handler)

@@ -1,43 +1,51 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api import auth, files, projects
-from app.database import connect_to_mongodb, close_mongodb_connection
-from app.config import settings
-import logging
-
-logger = logging.getLogger(__name__)
-
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from .api import auth, files, projects
+from .depends import engine
+from .config import settings, logger
+from .models.project_models import Model
+from .rate_limiter import limiter
 from contextlib import asynccontextmanager
+
+def init_db():
+    """
+    Initialize database tables
+    """
+    try:
+        Model.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Failed to create database tables: {str(e)}")
+        raise
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Startup")
-    connect_to_mongodb()
+    init_db()
     yield
-    close_mongodb_connection()
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    title=settings.project_name,
+    version=settings.version,
+    openapi_url=f"{settings.api_v1_str}/openapi.json",
     lifespan=lifespan
 )
-
-# Configure CORS
+app.state.limiter = limiter
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Modify this in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Include routers
-app.include_router(auth.router, prefix=settings.API_V1_STR)
-app.include_router(projects.router, prefix=settings.API_V1_STR)
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.include_router(auth.router, prefix=settings.api_v1_str)
 app.include_router(files.router, prefix="/files")
+app.include_router(projects.router, prefix=settings.api_v1_str)
 
-@app.get(f"{settings.API_V1_STR}")
+@app.get(f"{settings.api_v1_str}")
 async def root():
     """
     Root endpoint
