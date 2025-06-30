@@ -26,9 +26,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Set up Tesseract binary
-RUN chmod +x /app/app/tesseract
-
 # Create uploads directory
 RUN mkdir -p uploads
 

@@ -1,42 +1,46 @@
-version: '3.8'
+version: "3.8"
 
 services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "9000:8000"
     volumes:
       - .:/app
       - ./uploads:/app/uploads
+    env_file:
+      - .env
     environment:
-      - MONGODB_URL=mongodb://mongodb:27017
-      - MONGODB_DB=receiptiq
-      - MONGODB_USERNAME=${MONGODB_USERNAME}
-      - MONGODB_PASSWORD=${MONGODB_PASSWORD}
-      - MONGODB_AUTH_SOURCE=admin
-      - MONGODB_AUTH_MECHANISM=SCRAM-SHA-256
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-receiptiq}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
       - SECRET_KEY=${SECRET_KEY}
       - HONEYBADGER_API_KEY=${HONEYBADGER_API_KEY}
       - MAILTRAP_API_KEY=${MAILTRAP_API_KEY}
     depends_on:
-      - mongodb
+      - postgres
     networks:
       - receiptiq-network
 
-  mongodb:
-    image: mongo:6.0
-    ports:
-      - "27018:27017"
-    volumes:
-      - mongodb_data:/data/db
+  postgres:
+    image: postgres:15
+    env_file:
+      - .env
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGODB_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGODB_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_DB=${POSTGRES_DB:-receiptiq}
+    ports:
+      - "9001:${POSTGRES_PORT}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - receiptiq-network
 
 volumes:
-  mongodb_data:
+  postgres_data:
 
 networks:
   receiptiq-network:
