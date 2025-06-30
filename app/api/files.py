@@ -1,11 +1,8 @@
 from fastapi import APIRouter, HTTPException
-from fastapi import Depends
 from fastapi.responses import FileResponse
-from app.models.auth import User
-from app.depends import get_current_verified_user
 import os
 
-router = APIRouter() 
+router = APIRouter(tags=["Files"]) 
 
 # Media type mapping for expected file types
 MEDIA_TYPE_MAP = {
@@ -24,10 +21,7 @@ MEDIA_TYPE_MAP = {
 }
 
 @router.get("/{file_path:path}", status_code=200)
-async def download(
-    file_path: str, 
-    # current_user: User = Depends(get_current_verified_user)
-) -> FileResponse:
+async def download(file_path: str) -> FileResponse:
     if not os.path.exists(file_path):
         raise HTTPException(
             status_code=404, 
