@@ -1,6 +1,6 @@
-
-
 import datetime
+import hashlib
+import secrets
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
 from fastapi import HTTPException
@@ -10,7 +10,7 @@ from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Intege
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from app.models import Model
-from app.config import logger
+from app.config import logger, settings
 from app.utils import random_string
 
 
@@ -20,7 +20,9 @@ user_permissions_association = Table(
     'user_permissions',
     Model.metadata,
     Column('user_id', UUID(as_uuid=True), ForeignKey('users.id'), primary_key=True),
-    Column('permission_id', UUID(as_uuid=True), ForeignKey('permissions.id'), primary_key=True)
+    Column('permission_id', UUID(as_uuid=True), ForeignKey('permissions.id'), primary_key=True),
+    Column('created_at', DateTime, default=datetime.datetime.now),
+    Column('updated_at', DateTime, onupdate=datetime.datetime.now),
 )
 
 class Permission(Model):
@@ -34,18 +36,8 @@ class Permission(Model):
     
     users: Mapped[List["User"]] = relationship(
         secondary=user_permissions_association, 
-        back_populates='permissions'
+        back_populates='scopes'
     )
-
-class UserScope(Model):
-    __tablename__ = "user_scopes"
-    
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    scope: Mapped[uuid.UUID] = mapped_column(String, nullable=False)
-    granted_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now)
-    
-    user: Mapped["User"] = relationship("User", back_populates="scopes")
 
 class User(Model):
     __tablename__ = "users"
@@ -65,12 +57,11 @@ class User(Model):
     locked_until: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime(timezone=True), default=None)
     failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
     
-    permissions: Mapped[List[Permission]] = relationship(
+    scopes: Mapped[List[Permission]] = relationship(
         secondary=user_permissions_association,
         back_populates='users'
     )
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
-    scopes: Mapped[List["UserScope"]] = relationship("UserScope", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password: str) -> None:
         """
@@ -120,33 +111,22 @@ class User(Model):
             logger.info(f"User {self.first_name} verification failed")
             return False
     
-    async def has_perm(self, permission_codename: str) -> bool:
-        """
-        Check if the user has the permission
-        """
-        for perm in self.permissions:
-            if perm.codename == permission_codename:
-                return True
-        return False
-    
     async def has_scope(self, required_scope: str) -> bool:
         """Check if user has required scope"""
-        user_scopes = [scope.scope for scope in self.scopes]
+        user_scopes = [scope.codename for scope in self.scopes]
         return required_scope in user_scopes or "admin" in user_scopes
     
+    @property
     def is_locked(self) -> bool:
         """Check if account is locked"""
         if self.locked_until is None:
             return False
-        print(datetime.datetime.now(tz=datetime.timezone.utc), self.locked_until)
         return datetime.datetime.now(tz=datetime.timezone.utc) < self.locked_until
     
     def lock_account(self, db: Session, minutes: int = 30):
         """Lock account for specified minutes"""
         self.locked_until = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
-        self.failed_login_attempts += 1
         db.commit()
-
 
     def create_jwt_token(self, secret: str, algorithm: str, expiry_seconds: int, granted_scopes: list[str]="read") -> str:
         """
@@ -161,6 +141,17 @@ class User(Model):
             "scope": " ".join(granted_scopes)
         }
         return jwt.encode(payload=payload, key=secret, algorithm=algorithm)
+    
+    def create_refresh_token(self, db: Session) -> str:
+        """Create a refresh token for a user"""
+        token = secrets.token_urlsafe(settings.refresh_token_length)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=settings.refresh_token_expiry_seconds)
+        refresh_token = RefreshToken(user_id=self.id,token_hash=token_hash,expires_at=expires_at)
+        db.add(refresh_token)
+        db.commit()
+        db.refresh(refresh_token)    
+        return token
 
     @staticmethod
     def verify_jwt_token(token: str, secret: str, algorithm: str) -> Tuple[str, str] | None:
@@ -181,6 +172,19 @@ class User(Model):
             logger.error(f"JWT invalid token: {token} error: {e}")
             raise HTTPException(status_code=401, detail={"message": "Invalid access token"})
     
+    @staticmethod
+    def verify_refresh_token(token: str, db: Session):
+        """Verify refresh token and return user"""
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        refresh_token = db.query(RefreshToken).filter(
+            RefreshToken.token_hash == token_hash,
+            RefreshToken.revoked == False,
+            RefreshToken.expires_at > datetime.datetime.now(tz=datetime.timezone.utc)
+        ).first()
+        if not refresh_token:
+            return None
+        return refresh_token.user
+
     def __str__(self):
         return f"{self.first_name} - {self.email}"
 
@@ -216,7 +220,6 @@ class RevokedToken(Model):
     revoked_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False, default=datetime.datetime.now)
     expires_at: Mapped[datetime.datetime] = mapped_column(DateTime, nullable=False)
 
-# Add to models.py
 class LoginAttempt(Model):
     __tablename__ = "login_attempts"
     
@@ -232,7 +235,6 @@ class AuditLog(Model):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True, default=uuid.uuid4)
     user_id: Mapped[str] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     action: Mapped[str] = mapped_column(String, nullable=False)
-    resource: Mapped[str] = mapped_column(String, nullable=True)
     ip_address: Mapped[str] = mapped_column(String, nullable=False)
     user_agent: Mapped[str] = mapped_column(String, nullable=True)
     details: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=True)
