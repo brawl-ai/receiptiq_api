@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict, constr
 class LoginRequest(BaseModel):
     username: EmailStr = Field(..., example="user@example.com", description="User's email address")
     password: str = Field(..., example="supersecret", description="User's password")
-    scope: Optional[str] = "read"
+    scope: Optional[str] = "read:profile"
     grant_type: str
 
 class ForgotPasswordRequest(BaseModel):
@@ -63,7 +63,6 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = Field(None, min_length=1, max_length=100)
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
-    is_verified: Optional[bool] = None
 
 class UserResponse(UserBase):
     id: UUID
@@ -71,7 +70,7 @@ class UserResponse(UserBase):
     is_verified: bool
     created_at: datetime
     updated_at: Optional[datetime] = None
-    permissions: List[PermissionResponse] = []
+    scopes: List[PermissionResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
 
