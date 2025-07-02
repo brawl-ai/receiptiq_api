@@ -52,7 +52,7 @@ def is_token_revoked(token: str, db: Session) -> bool:
     ).first()
     return revoked_token is not None
 
-async def get_current_user(token: str = Depends(oauth2_scheme), client: Tuple = Depends(get_app), db: Session = Depends(get_db)) -> User:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
     if is_token_revoked(token, db):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -80,16 +80,6 @@ async def get_current_user(token: str = Depends(oauth2_scheme), client: Tuple = 
     if user is None:
         raise credentials_exception
     return user
-
-def require_scope(required_scope: str):
-    def scope_checker(current_user: User = Depends(get_current_user)):
-        if not current_user.has_scope(required_scope):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Insufficient permissions. Required scope: {required_scope}"
-            )
-        return current_user
-    return scope_checker
 
 async def get_app(authorization: Annotated[str, Header(alias="Authorization")]) -> Tuple[str, str]:
     if not authorization.startswith("Basic "):
