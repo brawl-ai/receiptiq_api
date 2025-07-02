@@ -49,3 +49,11 @@ if settings.honeybadger_api_key:
     hb_handler.setLevel(logging.DEBUG)
     hb_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(hb_handler)
+
+permissions = [
+    ('Admin','admin'),
+    ('Read Profile','read:profile'),
+    ('Update Profile and Password','write:profile'),
+    ('Read Projects','read:projects'),
+    ('Create/Update Projects','write:projects')
+]

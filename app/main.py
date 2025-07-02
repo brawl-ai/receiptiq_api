@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import select
+
+from .models import Permission, Model
 from .api import auth, files, projects
-from .depends import engine
-from .config import settings, logger
-from .models.project_models import Model
+from .depends import engine, session_local
+from .config import settings, logger, permissions
 from .rate_limiter import limiter
 from contextlib import asynccontextmanager
 
@@ -16,6 +18,12 @@ def init_db():
     """
     try:
         Model.metadata.create_all(bind=engine)
+        db = session_local()
+        for (perm_name, perm_code) in permissions:
+            if not db.execute(select(Permission).where(Permission.codename == perm_code)).scalar_one_or_none():
+                permission = Permission(name=perm_name,codename=perm_code)
+                db.add(permission)
+                db.commit()
         logger.info("Database tables created successfully")
     except Exception as e:
         logger.error(f"Failed to create database tables: {str(e)}")
@@ -52,5 +60,5 @@ async def root():
     """
     return {
         "message": "Welcome to ReceiptIQ API",
-        "version": settings.VERSION
+        "version": settings.api_v1_str
     } 
