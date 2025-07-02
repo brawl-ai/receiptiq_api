@@ -7,42 +7,19 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models import AuditLog, LoginAttempt, PasswordResetToken, RefreshToken, RevokedToken, User
-from app.schemas import ForgotPasswordRequest, ForgotPasswordResponse, RefreshTokenRequest, RefreshTokenResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeTokenRequest
+from app.models import AuditLog, LoginAttempt, PasswordResetToken, Permission, RefreshToken, RevokedToken, User
+from app.schemas import ForgotPasswordRequest, ForgotPasswordResponse, RefreshTokenRequest, RefreshTokenResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeTokenRequest, UserUpdate
 from app.schemas.auth import (
     UserCreate, UserResponse, TokenResponse,
     VerificationCodeRequest, VerificationCodeResponse,
     VerifyCodeRequest, LoginRequest, PasswordUpdate
 )
-from app.utils import generate_reset_token, hash_token, send_password_reset_email, send_verification_email
+from app.utils import PasswordValidator, generate_reset_token, hash_token, send_password_reset_email, send_verification_email
 from app.depends import get_app, get_current_user, get_db, require_scope
 from app.config import settings, logger
 from app.rate_limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-
-def create_refresh_token(user_id: str, db: Session) -> str:
-    """Create a refresh token for a user"""
-    token = secrets.token_urlsafe(settings.refresh_token_length)
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=settings.refresh_token_expiry_seconds)
-    refresh_token = RefreshToken(user_id=user_id,token_hash=token_hash,expires_at=expires_at)
-    db.add(refresh_token)
-    db.commit()
-    db.refresh(refresh_token)    
-    return token
-
-def verify_refresh_token(token: str, db: Session) -> Optional[User]:
-    """Verify refresh token and return user"""
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    refresh_token = db.query(RefreshToken).filter(
-        RefreshToken.token_hash == token_hash,
-        RefreshToken.revoked == False,
-        RefreshToken.expires_at > datetime.datetime.now(tz=datetime.timezone.utc)
-    ).first()
-    if not refresh_token:
-        return None
-    return refresh_token.user
 
 def revoke_token(token: str, token_type: str, db: Session, expires_at: datetime = None):
     """Add token to revocation list"""
@@ -71,83 +48,38 @@ def revoke_all_user_tokens(user_id: str, db: Session):
     
     db.commit()
 
-def log_security_event(
+def record_security_event(
     action: str,
     request: Request,
-    user_id: Optional[str] = None,
-    resource: Optional[str] = None,
-    details: Optional[dict] = None,
-    db: Session = None
+    user_id: Optional[str],
+    details: Optional[dict],
+    db: Session
 ):
     """Log security-related events"""
     audit_log = AuditLog(
         user_id=user_id,
         action=action,
-        resource=resource,
         ip_address=get_remote_address(request),
         user_agent=request.headers.get("user-agent"),
         details=details
     )
-    if db:
-        db.add(audit_log)
-        db.commit()
+    db.add(audit_log)
+    db.commit()
     logger.info(f"Security Event: {action}", extra={
         "user_id": user_id,
         "ip_address": get_remote_address(request),
-        "resource": resource,
         "details": details
     })
 
-class PasswordValidator:
-    @staticmethod
-    def validate_password(password: str) -> tuple[bool, List[str]]:
-        """Validate password strength"""
-        errors = []
-        
-        if len(password) < 8:
-            errors.append("Password must be at least 8 characters long")
-        
-        if len(password) > 128:
-            errors.append("Password must be less than 128 characters")
-        
-        if not re.search(r"[A-Z]", password):
-            errors.append("Password must contain at least one uppercase letter")
-        
-        if not re.search(r"[a-z]", password):
-            errors.append("Password must contain at least one lowercase letter")
-        
-        if not re.search(r"\d", password):
-            errors.append("Password must contain at least one digit")
-        
-        if not re.search(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>\/?]", password):
-            errors.append("Password must contain at least one special character")
-        
-        common_passwords = ["password", "123456", "qwerty", "admin"]
-        if password.lower() in common_passwords:
-            errors.append("Password is too common")
-        
-        return len(errors) == 0, errors
-
-def record_login_attempt(email: str, ip_address: str, success: bool, db: Session):
+def record_login_attempt(http_request: Request, email: str, success: bool, db: Session):
     """Record login attempt"""
     attempt = LoginAttempt(
         email=email,
-        ip_address=ip_address,
+        ip_address= get_remote_address(http_request),
         success=success
     )
     db.add(attempt)
     db.commit()
-
-def count_failed_login_attempts(email: str, db: Session, window_minutes: int = 60) -> int:
-    """Count failed attempts in time window"""
-    since = datetime.datetime.now(tz=datetime.timezone.utc) - datetime.timedelta(minutes=window_minutes)
-    count = db.query(LoginAttempt).filter(
-        LoginAttempt.email == email,
-        LoginAttempt.success == False,
-        LoginAttempt.attempted_at > since
-    ).count()
-    logger.info(f"Login attempts in last {window_minutes} mins are {count}")
-    return count
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = Depends(get_app)):
@@ -167,6 +99,7 @@ async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = 
         **Next Step:** Use `/otp/check` endpoint with OTP to activate account
     """
     try:
+        default_permissions = ["read:profile"]
         is_valid, errors = PasswordValidator.validate_password(user_in.password)
         if not is_valid:
             raise HTTPException(
@@ -185,6 +118,12 @@ async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = 
             email=user_in.email
         )
         user.set_password(user_in.password)
+        for perm_code in default_permissions:
+            perm = db.execute(select(Permission).where(Permission.codename == perm_code)).scalar_one_or_none()
+            if perm:
+                user.scopes.append(perm)
+            else:
+                logger.warning(f"Permission {perm_code} does not exist in the database")
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -201,8 +140,8 @@ async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = 
         raise e
 
 @router.post("/otp/get", response_model=VerificationCodeResponse)
-
-async def get_otp(request: VerificationCodeRequest, db: Session = Depends(get_db), _: Tuple = Depends(get_app)):
+@limiter.limit("5/minute")
+async def get_otp(request: Request,get_code_request: VerificationCodeRequest, db: Session = Depends(get_db), _: Tuple = Depends(get_app)):
     """
         Request a new OTP verification code
         
@@ -223,7 +162,7 @@ async def get_otp(request: VerificationCodeRequest, db: Session = Depends(get_db
         - Request one for use as the login mechanism
    """
     try:
-        user: User = db.execute(select(User).where(User.email == request.email)).scalars().first()
+        user: User = db.execute(select(User).where(User.email == get_code_request.email)).scalars().first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -241,7 +180,8 @@ async def get_otp(request: VerificationCodeRequest, db: Session = Depends(get_db
         raise e
 
 @router.post("/otp/check")
-async def check_otp(request: VerifyCodeRequest, db: Session = Depends(get_db),_: Tuple = Depends(get_app)):
+@limiter.limit("5/minute")
+async def check_otp(request: Request, verify_request: VerifyCodeRequest, db: Session = Depends(get_db),_: Tuple = Depends(get_app)):
     """
         Verify email with OTP code
         
@@ -262,18 +202,26 @@ async def check_otp(request: VerifyCodeRequest, db: Session = Depends(get_db),_:
         **Note:** User can immediately use the returned token to access protected endpoints
     """
     try:
-        user: User = db.execute(select(User).where(User.email == request.email)).scalars().first()
+        user: User = db.execute(select(User).where(User.email == verify_request.email)).scalars().first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Missing or Deactivated User {request.email}"
+                detail=f"Missing or Deactivated User {verify_request.email}"
             )
-        is_valid = await user.validate_otp(db, request.code)
+        is_valid = await user.validate_otp(db, verify_request.code)
         if not is_valid:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired otp code"
             )
+        for perm_code in ["write:profile","write:projects"]:
+            perm = db.execute(select(Permission).where(Permission.codename == perm_code)).scalar_one_or_none()
+            if perm:
+                if perm not in user.scopes:
+                    user.scopes.append(perm)
+                    db.add(user)
+                    db.commit()
+                    db.refresh(user)
         user_data = UserResponse.model_validate(user)
         return {"message": "User Email Verified", "user": user_data.model_dump()}
     except Exception as e:
@@ -281,7 +229,7 @@ async def check_otp(request: VerifyCodeRequest, db: Session = Depends(get_db),_:
         raise e
 
 @router.post("/token", response_model=TokenResponse)
-@limiter.limit("5/minute")
+@limiter.limit("10/minute")
 async def token(request: Request,login_request: LoginRequest = Form(), db: Session = Depends(get_db), _ = Depends(get_app)):
     """
     OAuth2 Token Endpoint - Password Flow
@@ -304,20 +252,19 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
     - User must be verified and active
     - Valid client credentials required
     """
-    ip_address = get_remote_address(request)
     try:        
         if login_request.grant_type != "password":
             raise HTTPException(status.HTTP_400_BAD_REQUEST, {
-                    "error": "unsupported_grant_type",
-                    "error_description": f"Grant type '{login_request.grant_type}' is not supported. Use 'password'."
-                })
+                "error": "unsupported_grant_type",
+                "error_description": f"Grant type '{login_request.grant_type}' is not supported. Use 'password'."
+            })
         
         user: User = db.execute(select(User).where(User.email == login_request.username)).scalars().first()
         
         if not user or not user.verify_password(login_request.password):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED,detail="Invalid Username or Password")
         
-        if user.is_locked():
+        if user.is_locked:
             raise HTTPException(status.HTTP_423_LOCKED, f"Account is locked until {user.locked_until.isoformat()}. Contact support if needed.")
         
         if not user.is_verified:
@@ -326,8 +273,8 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
         if not user.is_active:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Inactive user")
         
-        requested_scopes = login_request.scope.split() if login_request.scope else ["read"]
-        user_scopes = [scope.scope for scope in user.scopes]
+        requested_scopes = login_request.scope.split() if login_request.scope else ["read:profile"]
+        user_scopes = [scope.codename for scope in user.scopes]
         granted_scopes = [scope for scope in requested_scopes if scope in user_scopes]
         access_token = user.create_jwt_token(
             secret=settings.secret_key,
@@ -335,18 +282,18 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             expiry_seconds=settings.access_token_expiry_seconds,
             granted_scopes=granted_scopes
         )
-        refresh_token = create_refresh_token(user.id, db)
+        refresh_token = user.create_refresh_token(db)
         user.failed_login_attempts = 0
         user.locked_until = None
         db.add(user)
         db.commit()
         record_login_attempt(
+            http_request=request,
             email=login_request.username, 
-            ip_address=ip_address, 
             success=True, 
             db=db
         )
-        log_security_event(
+        record_security_event(
             action="LOGIN_SUCCESS",
             request=request,
             user_id=user.id,
@@ -361,15 +308,13 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             "scope": " ".join(granted_scopes)
         }
     except Exception as e:
-        if user.failed_login_attempts >= 100:
-            user.lock_account(db=db, minutes=30)
-        record_login_attempt(login_request.username, ip_address, False, db)
-        log_security_event(
-            action="LOGIN_FAILED",
-            request=request,
-            details={"email": login_request.username, "error": str(e)},
-            db=db
-        )
+        if user.failed_login_attempts >= 10:
+            user.lock_account(db=db, minutes=5)
+        else:
+            user.failed_login_attempts += 1
+            db.commit()
+        record_login_attempt(http_request=request,email=login_request.username, success=False, db=db)
+        record_security_event(action="LOGIN_FAILED",user_id=user.id, request=request,details={"email": login_request.username, "error": str(e)}, db=db)
         raise
 
 @router.post("/token/refresh", response_model=RefreshTokenResponse)
@@ -398,7 +343,7 @@ async def refresh_token(refresh_token_request: RefreshTokenRequest,db: Session =
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": "unsupported_grant_type", "error_description": "Only 'refresh_token' grant type is supported"}
         )
-    user: User = verify_refresh_token(refresh_token_request.refresh_token, db)
+    user: User = User.verify_refresh_token(refresh_token_request.refresh_token, db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -414,7 +359,7 @@ async def refresh_token(refresh_token_request: RefreshTokenRequest,db: Session =
         algorithm=settings.algorithm,
         expiry_seconds=settings.access_token_expiry_seconds
     )
-    new_refresh_token = create_refresh_token(user.id, db)
+    new_refresh_token = user.create_refresh_token(db)
     revoke_token(refresh_token_request.refresh_token, "refresh", db)
     return {
         "access_token": access_token,
@@ -522,7 +467,7 @@ async def reset_password(reset_password_request: ResetPasswordRequest, db: Sessi
     user.set_password(reset_password_request.new_password)
     db.add(user)    
     db.query(PasswordResetToken).filter(
-        PasswordResetToken.id == reset_token
+        PasswordResetToken.id == reset_token.id
     ).update({"used": True})
     db.commit()
     db.refresh(user)
@@ -530,11 +475,11 @@ async def reset_password(reset_password_request: ResetPasswordRequest, db: Sessi
             message="Password has been reset successfully. Please log in with your new password."
         )
 
-@router.post("/password/change", response_model=UserResponse)
+@router.post("/password/change", response_model=ResetPasswordResponse)
 async def change_password(
     request: Request,
     password_update: PasswordUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_scope("write:profile")),
     db: Session = Depends(get_db)
 ):
     """
@@ -553,7 +498,7 @@ async def change_password(
             detail={"message": "New password does not meet requirements", "errors": errors}
         )
     if not current_user.verify_password(password_update.current_password):
-        log_security_event(
+        record_security_event(
             action="PASSWORD_CHANGE_FAILED",
             request=request,
             user_id=current_user.id,
@@ -569,14 +514,16 @@ async def change_password(
     db.commit()
     db.refresh(current_user)
     revoke_all_user_tokens(current_user.id, db)
-    log_security_event(
+    record_security_event(
         action="PASSWORD_CHANGED",
         request=request,
         user_id=current_user.id,
         details={"tokens_revoked": True},
         db=db
     )
-    return UserResponse.model_validate(current_user)
+    return ResetPasswordResponse(
+            message="Password has been updated successfully."
+        )
 
 @router.get("/me", response_model=UserResponse)
 async def get_user_profile(current_user: User = Depends(require_scope("read:profile")),):
@@ -585,6 +532,30 @@ async def get_user_profile(current_user: User = Depends(require_scope("read:prof
     Returns the authenticated user's profile information.
     """
     return current_user
+
+@router.patch("/me", status_code=status.HTTP_200_OK)
+async def update_user_profile(update_payload: UserUpdate,current_user: User = Depends(require_scope("write:profile")),db: Session = Depends(get_db)):
+    """
+    Update current user profile
+    """
+    current_user.first_name = update_payload.first_name if update_payload.first_name else current_user.first_name
+    current_user.last_name = update_payload.last_name if update_payload.last_name else current_user.last_name
+    current_user.is_active = update_payload.is_active if update_payload.is_active else current_user.is_active
+    if update_payload.email:
+        current_user.email = update_payload.email
+        current_user.is_verified = False
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+    if not current_user.is_verified:
+        await current_user.create_otp(
+            db=db,
+            code_length=settings.otp_length,
+            code_expiry_seconds=settings.otp_expiry_seconds
+        )
+        await send_verification_email(current_user.first_name,current_user.email, current_user.otp)
+    user_data = UserResponse.model_validate(current_user)
+    return {"message": "User updated successfully. Any new email needs to be verified", "user": user_data.model_dump()}
 
 @router.post("/logout")
 async def logout(
@@ -612,10 +583,11 @@ async def logout(
     try:
         revoke_token(token, "access", db)
         revoke_all_user_tokens(current_user.id, db)
-        log_security_event(
+        record_security_event(
             action="LOGOUT",
             request=request,
             user_id=current_user.id,
+            details={"email": current_user.email},
             db=db
         )
         logger.info(f"User {current_user.id} logged out successfully")
