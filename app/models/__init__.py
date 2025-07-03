@@ -14,5 +14,8 @@ class Model(DeclarativeBase):
                 object_dict[key] = str(value)
         return object_dict
     
-from .auth_models import *
-from .project_models import *
+from .auth import *
+from .projects import *
+from .fields import *
+from .receipts import *
+from .data import *
