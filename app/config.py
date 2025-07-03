@@ -55,5 +55,6 @@ permissions = [
     ('Read Profile','read:profile'),
     ('Update Profile and Password','write:profile'),
     ('Read Projects','read:projects'),
-    ('Create/Update Projects','write:projects')
+    ('Create/Update Projects','write:projects'),
+    ('Delete Projects','delete:projects'),
 ]
