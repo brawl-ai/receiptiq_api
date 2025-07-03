@@ -9,9 +9,9 @@ from app.models import User, Field, Project
 from app.schemas import AddFieldRequest, UpdateFieldRequest, FieldResponse
 from app import crud
 
-router = APIRouter(prefix="/projects/{project_id}", tags=["Fields"])
+router = APIRouter(prefix="/projects/{project_id}/fields", tags=["Fields"])
 
-@router.post("/fields", response_model=FieldResponse)
+@router.post("/", response_model=FieldResponse)
 async def add_field(
     project_id: UUID,
     field_in: AddFieldRequest,
@@ -39,7 +39,7 @@ async def add_field(
     )
     return field
 
-@router.post("/fields/{field_id}/add_child", response_model=FieldResponse)
+@router.post("/{field_id}/add_child", response_model=FieldResponse)
 async def add_child_field(
     project_id: UUID,
     field_id: UUID,
@@ -74,7 +74,7 @@ async def add_child_field(
     )
     return field
 
-@router.get("/fields", response_model=ListResponse)
+@router.get("/", response_model=ListResponse)
 async def list_fields(
     project_id: UUID,
     params: Dict[str, Any] = Depends(get_query_params),
@@ -102,7 +102,7 @@ async def list_fields(
         **params
     )
 
-@router.get("/fields/{field_id}", response_model=FieldResponse)
+@router.get("/{field_id}", response_model=FieldResponse)
 async def get_field(
     project_id: UUID,
     field_id: UUID,
@@ -125,7 +125,7 @@ async def get_field(
     field = project.get_field(db, field_id)    
     return field
 
-@router.put("/fields/{field_id}", response_model=FieldResponse)
+@router.put("/{field_id}", response_model=FieldResponse)
 async def update_field(
     project_id: UUID,
     field_id: UUID,
@@ -156,7 +156,7 @@ async def update_field(
     db.refresh(field)
     return field
 
-@router.delete("/fields/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{field_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_field_from_project(
     project_id: UUID,
     field_id: UUID,
