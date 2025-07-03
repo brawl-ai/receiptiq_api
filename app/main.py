@@ -6,7 +6,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select
 
 from .models import Permission, Model
-from .api import auth, files, projects
+from .api import auth, projects, fields, files
 from .depends import engine, session_local
 from .config import settings, logger, permissions
 from .rate_limiter import limiter
@@ -50,8 +50,9 @@ app.add_middleware(
 )
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(auth.router, prefix=settings.api_v1_str)
-app.include_router(files.router, prefix="/files")
 app.include_router(projects.router, prefix=settings.api_v1_str)
+app.include_router(fields.router, prefix=settings.api_v1_str)
+app.include_router(files.router, prefix="/files")
 
 @app.get(f"{settings.api_v1_str}")
 async def root():

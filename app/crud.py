@@ -3,7 +3,7 @@ from fastapi import HTTPException, Query
 from pydantic import UUID4, BaseModel
 from sqlalchemy import exc, or_, select
 from sqlalchemy.orm import Session
-from app.models.project_models import Model
+from app.models import Model
 from app.schemas import ListResponse
 from app.config import logger
 
