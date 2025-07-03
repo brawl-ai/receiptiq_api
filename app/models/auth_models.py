@@ -111,7 +111,7 @@ class User(Model):
             logger.info(f"User {self.first_name} verification failed")
             return False
     
-    async def has_scope(self, required_scope: str) -> bool:
+    def has_scope(self, required_scope: str) -> bool:
         """Check if user has required scope"""
         user_scopes = [scope.codename for scope in self.scopes]
         return required_scope in user_scopes or "admin" in user_scopes

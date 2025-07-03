@@ -214,14 +214,12 @@ async def check_otp(request: Request, verify_request: VerifyCodeRequest, db: Ses
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired otp code"
             )
-        for perm_code in ["write:profile","write:projects"]:
-            perm = db.execute(select(Permission).where(Permission.codename == perm_code)).scalar_one_or_none()
-            if perm:
-                if perm not in user.scopes:
-                    user.scopes.append(perm)
-                    db.add(user)
-                    db.commit()
-                    db.refresh(user)
+        for perm in db.execute(select(Permission).where(Permission.codename != "admin")).scalars():
+            if perm not in user.scopes:
+                user.scopes.append(perm)
+                db.add(user)
+                db.commit()
+                db.refresh(user)
         user_data = UserResponse.model_validate(user)
         return {"message": "User Email Verified", "user": user_data.model_dump()}
     except Exception as e:
