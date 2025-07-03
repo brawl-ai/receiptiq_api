@@ -1,24 +1,22 @@
 import csv
 import io
-from operator import ge
-from fastapi.background import P
 from fastapi.responses import StreamingResponse
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 from app import crud
-from app.depends import get_db, get_query_params
+from app.depends import get_db, get_query_params, require_scope
 from app.extractor import InvoiceExtractor
 from app.models.project_models import Field, Project, Receipt
+from app.schemas import ListResponse
 from app.schemas.projects import (
     AddFieldToProjectRequest, ProjectCreate, ProjectResponse, ProjectUpdate,
     FieldResponse,
-    DataValueResponse,
-    ReceiptResponse, ReceiptStatusUpdate, ReceiptDataValueUpdate
+    ReceiptResponse, ReceiptStatusUpdate
 )
 from app.depends import get_current_verified_user
-from app.models.project_models import User
+from app.models import User
 from uuid import UUID
 from app.utils import save_upload_file
 from app.config import settings
@@ -29,7 +27,7 @@ router = APIRouter(prefix="/projects", tags=["Projects"])
 @router.post("", response_model=ProjectResponse)
 async def create_project(
     project_in: ProjectCreate,
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(require_scope("write:projects")),
     db: Session = Depends(get_db)
 ):
     """
@@ -45,27 +43,28 @@ async def create_project(
     db.refresh(project)
     return project
 
-@router.get("", response_model=List[ProjectResponse])
+@router.get("", response_model=ListResponse)
 async def list_filter_search_projects(
     params: Dict[str, Any] = Depends(get_query_params),
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(require_scope("read:projects")),
     db: Session = Depends(get_db)
 ):
     """
-    List, Filter and Search all projects owned by the current user
+        List, Filter and Search all projects owned by the current user or all if admin
     """
+    if not current_user.has_scope("admin"):
+        params["owner_id"] = current_user.id
     return await crud.paginate(
         db=db,
         model=Project,
         schema=ProjectResponse,
-        owner_id=current_user.id,
         **params
     )
 
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: UUID,
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(require_scope("read:projects")),
     db: Session = Depends(get_db)
 ):
     """
@@ -76,7 +75,7 @@ async def get_project(
         model=Project,
         id=project_id
     )
-    if project.owner_id != current_user:
+    if project.owner != current_user and not current_user.has_scope("admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access this project"
@@ -87,7 +86,7 @@ async def get_project(
 async def update_project(
     project_id: UUID,
     project_update_in: ProjectUpdate,
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(require_scope("write:projects")),
     db: Session = Depends(get_db)
 ):
     """
@@ -98,7 +97,7 @@ async def update_project(
         model=Project,
         id=project_id
     )
-    if project.owner != current_user:
+    if project.owner != current_user and not current_user.has_scope("admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update this project"
@@ -113,7 +112,7 @@ async def update_project(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: UUID,
-    current_user: User = Depends(get_current_verified_user),
+    current_user: User = Depends(require_scope("delete:projects")),
     db: Session = Depends(get_db),
 ):
     """
@@ -124,12 +123,11 @@ async def delete_project(
         model=Project,
         id=project_id
     )
-    if project.owner != current_user:
+    if project.owner != current_user and not current_user.has_scope("admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to delete this project"
         )
-    
     db.delete(project)
     db.commit()
     return None
