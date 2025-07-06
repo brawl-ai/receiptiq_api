@@ -42,3 +42,6 @@ class Field(Model):
         """
         if self.type not in [t.value for t in FieldType]:
             raise ValueError(f"Invalid field type: {self.type}. Must be one of {[t.value for t in FieldType]}")
+        
+    def __str__(self):
+        return f"{self.name} {self.type.value}"

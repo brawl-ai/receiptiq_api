@@ -34,7 +34,7 @@ def get_db():
         raise
     finally:
         if db:
-            logger.error("Closing database connection")
+            logger.info("Closing database connection")
             db.close()
             
 async def get_app(client_id: Annotated[str, Header()], client_secret: Annotated[str, Header()]) -> Tuple[str, str]:
@@ -72,6 +72,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         )
         email: str = payload.get("sub")
         user_id: str = payload.get("user_id")
+        scope: str = payload.get("scope")
         if email is None or user_id is None:
             raise credentials_exception
     except jwt.InvalidTokenError:
@@ -79,7 +80,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     user = db.execute(select(User).where(User.email == email,User.id == user_id)).scalars().first()
     if user is None:
         raise credentials_exception
-    return user
+    return user, scope
 
 async def get_app(authorization: Annotated[str, Header(alias="Authorization")]) -> Tuple[str, str]:
     if not authorization.startswith("Basic "):
@@ -106,19 +107,18 @@ async def get_app(authorization: Annotated[str, Header(alias="Authorization")]) 
             headers={"WWW-Authenticate": "Basic"}
         )
     
-async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
+async def get_current_active_verified_user(auth_user: Tuple[User, str] = Depends(get_current_user)) -> Tuple[User, str]:
+    current_user, scope = auth_user
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
-
-async def get_current_verified_user(current_user: User = Depends(get_current_active_user)) -> User:
     if not current_user.is_verified:
         raise HTTPException(status_code=400, detail="User not verified")
-    return current_user
+    return current_user, scope
 
 def require_scope(required_scope: str):
-    def scope_checker(current_user: User = Depends(get_current_verified_user)):
-        if not current_user.has_scope(required_scope):
+    def scope_checker(auth: Tuple[User, str] = Depends(get_current_active_verified_user)):
+        current_user, token_scope = auth
+        if not required_scope in token_scope.split(" "):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Insufficient permissions. Required scope: {required_scope}"

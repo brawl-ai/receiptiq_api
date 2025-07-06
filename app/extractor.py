@@ -1,6 +1,7 @@
 import os
 import json
-from typing import Dict, Optional, Any
+import pprint
+from typing import Dict, List, Optional, Any, Tuple
 from pathlib import Path
 import logging
 from pydantic_settings import BaseSettings
@@ -50,7 +51,7 @@ class InvoiceExtractor:
     def extract_from_document(self, 
                             document_path: str, 
                             schema: Dict[str, Any],
-                            extraction_instructions: Optional[str] = None) -> Dict[str, Any]:
+                            extraction_instructions: Optional[str] = None) -> Tuple[Dict[str, Any],List]:
         """
         Main method to extract data from invoice document using user-defined schema
         
@@ -68,13 +69,14 @@ class InvoiceExtractor:
         if not text.strip():
             raise ValueError("No text could be extracted from the document")
         extracted_data = self.llm_extract_data(text, schema, extraction_instructions)
-        extracted_data['_metadata'] = {
+        metadata = {
             'source_file': document_path,
             'extraction_method': f"{self.llm_provider}:{self.model_name}",
             'text_length': len(text),
-            'coordinates_available': len(coordinates) > 0
+            'coordinates_available': len(coordinates) > 0,
+            'coordinates': coordinates
         }
-        return extracted_data
+        return extracted_data, metadata
     
     def extract_text_from_document(self, document_path: str) -> tuple[str, Dict]:
         """Extract text from PDF or image document"""
@@ -88,7 +90,7 @@ class InvoiceExtractor:
     
     def extract_from_pdf(self, pdf_path: str) -> tuple[str, Dict]:
         """Extract text from PDF with coordinate information"""
-        text, coordinates = "",{}
+        text, char_coodinates, word_coordinates = "",{}, []
         try:
             with pdfplumber.open(pdf_path) as pdf:
                 for page_num, page in enumerate(pdf.pages):
@@ -96,23 +98,51 @@ class InvoiceExtractor:
                     if page_text:
                         text += f"--- Page {page_num + 1} ---\n{page_text}\n"
                     try:
-                        chars = page.chars
-                        for char in chars:
-                            if char['text'].strip():
-                                y_pos = int(char['top'])
-                                if y_pos not in coordinates:
-                                    coordinates[y_pos] = []
-                                coordinates[y_pos].append({
-                                    'text': char['text'],
-                                    'x': char['x0'],
-                                    'y': char['top'],
-                                    'page': page_num
-                                })
+                        for char in page.chars:
+                            y_pos = int(char['top'])
+                            if y_pos not in char_coodinates:
+                                char_coodinates[y_pos] = []
+                            char_coodinates[y_pos].append({
+                                'text': char['text'],
+                                'x': char['x0'],
+                                'y': char['top'],
+                                'height': char["height"],
+                                'page': page_num
+                            })
                     except Exception as e:
                         self.logger.warning(f"Could not extract coordinates: {e}")
-        
+            char_coodinates = {k:v for k,v in char_coodinates.items() if len(v)>1}
+            for y, line in char_coodinates.items():
+                current_word = ""
+                start_x = line[0]["x"]
+                for (id,char) in enumerate(line):
+                    if not char["text"].strip():
+                        end_x = int(char["x"])
+                        width = end_x-start_x
+                        word_coordinates.append({
+                            "text": current_word,
+                            'x': start_x,
+                            'y': y,
+                            'width': width,
+                            'height': char["height"],
+                            'confidence': 100
+                        })
+                        current_word = ""
+                        start_x = line[id+1]["x"] if id < (len(line)-1) else 0
+                    else:
+                        current_word += char["text"]
+                else:
+                    end_x = int(char["x"])
+                    width = end_x-start_x
+                    word_coordinates.append({
+                        'text': current_word,
+                        'x': start_x,
+                        'y': y,
+                        'width': width,
+                        'height': char['height'],
+                        'confidence': 100
+                    })
         except Exception as e:
-            # Fallback to PyPDF
             self.logger.warning(f"pdfplumber failed, trying PyPDF: {e}")
             try:
                 with open(pdf_path, 'rb') as file:
@@ -122,7 +152,7 @@ class InvoiceExtractor:
             except Exception as e2:
                 raise Exception(f"Failed to extract text from PDF: {e2}")
         
-        return text, coordinates
+        return text, word_coordinates
     
     def extract_from_image(self, image_path: str) -> tuple[str, Dict]:
         """Extract text from image using OCR"""
@@ -132,27 +162,15 @@ class InvoiceExtractor:
                 raise ValueError(f"Could not load image: {image_path}")
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
             denoised = cv2.fastNlMeansDenoising(gray)
-            _, thresh = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            
-            # # Use local Tesseract binary
-            # tesseract_path = os.path.join(os.path.dirname(__file__), 'tesseract')
-            # if not os.path.exists(tesseract_path):
-            #     raise FileNotFoundError(f"Tesseract binary not found at {tesseract_path}")
-            # pytesseract.pytesseract.tesseract_cmd = tesseract_path
-            
+            _, thresh = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)            
             data = pytesseract.image_to_data(thresh, output_type=pytesseract.Output.DICT)
-            text_parts = []
-            coordinates = {}
+            text_parts,coordinates = [],[]
             for i in range(len(data['text'])):
                 if int(data['conf'][i]) > 30:  # Only include confident text
                     text_part = data['text'][i].strip()
                     if text_part:
                         text_parts.append(text_part)
-                        
-                        y_pos = data['top'][i]
-                        if y_pos not in coordinates:
-                            coordinates[y_pos] = []
-                        coordinates[y_pos].append({
+                        coordinates.append({
                             'text': text_part,
                             'x': data['left'][i],
                             'y': data['top'][i],
@@ -220,26 +238,13 @@ JSON Response:
         """Convert schema dictionary to description for LLM"""
         description = "{\n"
         for key, value in schema.items():
-            if isinstance(value, dict):
-                if 'type' in value:
-                    field_type = value['type']
-                    field_desc = value.get('description', '')
-                    required = value.get('required', False)
-                    
-                    description += f'  "{key}": {field_type}'
-                    if field_desc:
-                        description += f' // {field_desc}'
-                    if required:
-                        description += ' (required)'
-                    description += ',\n'
-                else:
-                    # Nested object
-                    description += f'  "{key}": {{\n'
-                    for nested_key, nested_value in value.items():
-                        description += f'    "{nested_key}": {nested_value},\n'
-                    description += '  },\n'
-            else:
-                description += f'  "{key}": "{value}",\n'
+            if 'type' in value: # is this the leaf
+                field_type = value['type']
+                field_desc = value.get('description', '')
+                description += f'  "{key}": {field_type} // {field_desc} ,\n'
+            else: # Nested object
+                description += f'  "{key}": '
+                description += self.describe_schema(value)
         
         description = description.rstrip(',\n') + '\n}'
         return description
@@ -278,44 +283,3 @@ JSON Response:
         """Call Ollama local API for extraction"""
         raise NotImplementedError
 
-"""
-if __name__ == "__main__":
-    sample_schema = {
-        "vendor_name": {"type": "string", "description": "Name of the vendor/supplier", "required": True},
-        "vendor_address": {"type": "string", "description": "Vendor's address"},
-        "invoice_number": {"type": "string", "description": "Invoice number", "required": True},
-        "invoice_date": {"type": "string", "description": "Invoice date in YYYY-MM-DD format"},
-        "due_date": {"type": "string", "description": "Payment due date in YYYY-MM-DD format"},
-        "total_amount": {"type": "number", "description": "Total amount due", "required": True},
-        "subtotal": {"type": "number", "description": "Subtotal before tax"},
-        "tax_amount": {"type": "number", "description": "Tax amount"},
-        "currency": {"type": "string", "description": "Currency code (e.g., USD, EUR)"},
-        "line_items": {
-            "type": "array",
-            "description": "List of line items",
-            "items": {
-                "description": {"type": "string"},
-                "quantity": {"type": "number"},
-                "unit_price": {"type": "number"},
-                "total_price": {"type": "number"}
-            }
-        }
-    }
-    extractor = InvoiceExtractor(
-        llm_provider="openai",  # or "ollama" for local
-        model_name="gpt-4.1-nano-2025-04-14",
-        api_key=settings.openai_api_key
-    )
-    try:
-        result = extractor.extract_from_document(
-            document_path="sample_receipt.jpg",
-            schema=sample_schema,
-            extraction_instructions="Focus on accuracy for financial amounts and dates."
-        )
-        
-        print(json.dumps(result, indent=2))
-        
-    except Exception as e:
-        print(f"Extraction failed: {e}")
-        
-"""
