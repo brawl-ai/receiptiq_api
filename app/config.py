@@ -61,5 +61,10 @@ permissions = [
     ('Read Receipts','read:receipts'),
     ('Create/Update Receipts','write:receipts'),
     ('Read Data','read:data'),
-    ('Export Data','export:data')
+    ('Export Data','export:data'),
+]
+
+subscription_plans = [
+    ('Standard Monthly','1k invoices per month',10.00, "USD","MONTHLY",0,"ACTIVE"),
+    ('Standard Yearly','1.1k invoices per month',8, "USD","YEARLY",0,"ACTIVE")
 ]

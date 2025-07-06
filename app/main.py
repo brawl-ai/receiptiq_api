@@ -7,10 +7,10 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import select
 
-from .models import Permission, Model
-from .api import auth, projects, fields, files, receipts, data
+from .models import Permission, Model, SubscriptionPlan
+from .api import auth, projects, fields, files, receipts, data, subscriptions
 from .depends import engine, session_local
-from .config import settings, logger, permissions
+from .config import settings, logger, permissions, subscription_plans
 from .rate_limiter import limiter
 from contextlib import asynccontextmanager
 
@@ -25,6 +25,19 @@ def init_db():
             if not db.execute(select(Permission).where(Permission.codename == perm_code)).scalar_one_or_none():
                 permission = Permission(name=perm_name,codename=perm_code)
                 db.add(permission)
+                db.commit()
+        for (name,descr,price,currency,billing_interval,trial_period_days,status) in subscription_plans:
+            if not db.execute(select(SubscriptionPlan).where(SubscriptionPlan.billing_interval == billing_interval)).scalar_one_or_none():
+                plan = SubscriptionPlan(
+                    name=name,
+                    description=descr,
+                    price=price,
+                    currency=currency,
+                    billing_interval=billing_interval,
+                    trial_period_days=trial_period_days,
+                    status=status
+                )
+                db.add(plan)
                 db.commit()
         logger.info("Database tables created successfully")
     except Exception as e:
@@ -58,6 +71,7 @@ app.include_router(projects.router, prefix=settings.api_v1_str)
 app.include_router(fields.router, prefix=settings.api_v1_str)
 app.include_router(receipts.router, prefix=settings.api_v1_str)
 app.include_router(data.router, prefix=settings.api_v1_str)
+app.include_router(subscriptions.router, prefix=settings.api_v1_str)
 app.include_router(files.router, prefix="/files")
 
 @app.get(f"{settings.api_v1_str}")
