@@ -21,16 +21,16 @@ class CurrencyType(str, PyEnum):
     KES = 'KES'
 
 class PlanStatus(PyEnum):
-    ACTIVE = "active"
-    INACTIVE = "inactive"
-    ARCHIVED = "archived"
+    ACTIVE = "ACTIVE"
+    INACTIVE = "INACTIVE"
+    ARCHIVED = "ARCHIVED"
 
 class BillingInterval(PyEnum):
-    MONTHLY = "monthly"
-    QUARTERLY = "quarterly"
-    YEARLY = "yearly"
-    WEEKLY = "weekly"
-    ONE_TIME = "one_time"
+    MONTHLY = "MONTHLY"
+    QUARTERLY = "QUARTERLY"
+    YEARLY = "YEARLY"
+    WEEKLY = "WEEKLY"
+    ONE_TIME = "ONE_TIME"
 
 class PaymentStatus(PyEnum):
     SUCCESS = "success"
