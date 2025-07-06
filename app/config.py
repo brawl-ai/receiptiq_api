@@ -1,8 +1,10 @@
 import logging
-from honeybadger.contrib import HoneybadgerHandler
+import honeybadger
+from honeybadger import Honeybadger, contrib, honeybadger
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+    environment: str = "development"
     project_name: str = "ReceiptIQ API"
     version: str = "0.0.1"
     api_v1_str: str = "/api/v1"
@@ -36,19 +38,14 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger('honeybadger')
-
-# Configure Honeybadger
-if settings.honeybadger_api_key:
-    hb_handler = HoneybadgerHandler(api_key=settings.honeybadger_api_key)
-    hb_handler.setLevel(logging.DEBUG)
-    hb_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(hb_handler)
+logger = logging.getLogger('HB')
+hb = Honeybadger()
+hb.configure(environment=settings.environment, api_key=settings.honeybadger_api_key,force_report_data=True)
+hb_handler = contrib.HoneybadgerHandler(api_key=settings.honeybadger_api_key)
+hb_handler.honeybadger = hb
+hb_handler.setLevel(logging.WARN)
+hb_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(hb_handler)
 
 permissions = [
     ('Admin','admin'),
@@ -57,4 +54,12 @@ permissions = [
     ('Read Projects','read:projects'),
     ('Create/Update Projects','write:projects'),
     ('Delete Projects','delete:projects'),
+    ('Process Projects','process:projects'),
+    ('Read Fields','read:fields'),
+    ('Create/Update Fields','write:fields'),
+    ('Delete Fields','delete:fields'),
+    ('Read Receipts','read:receipts'),
+    ('Create/Update Receipts','write:receipts'),
+    ('Read Data','read:data'),
+    ('Export Data','export:data')
 ]
