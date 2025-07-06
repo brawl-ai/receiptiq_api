@@ -4,3 +4,5 @@ env
 uploads
 */__pycache__
 */*/__pycache__/
+notes
+test.py
