@@ -38,7 +38,7 @@ class FieldResponse(BaseModel):
     type: FieldType
     description: Optional[str] = Field(None, max_length=500)
     parent: Optional[FieldParent]
-    children: List[FieldParent]
+    children: List["FieldResponse"]
     project: FieldProject
     created_at: datetime
     updated_at: Optional[datetime] = None
