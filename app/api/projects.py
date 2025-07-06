@@ -1,21 +1,17 @@
-import csv
-import io
-from fastapi.responses import StreamingResponse
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
 from app import crud
+from app.schemas import FieldResponse
 from app.depends import get_db, get_query_params, require_scope
 from app.extractor import InvoiceExtractor
 from app.models.projects import Project, Receipt
 from app.schemas import ListResponse
 from app.schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
-from app.schemas.receipts import ReceiptResponse, ReceiptUpdate
-from app.depends import get_current_verified_user
+from app.schemas.receipts import ReceiptResponse
 from app.models import User
 from uuid import UUID
-from app.utils import save_upload_file
 from app.config import settings
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -128,10 +124,20 @@ async def delete_project(
     db.commit()
     return None
 
-@router.post("/{project_id}/process", response_model=List[ReceiptResponse])
+def prepare_schema(fields: List):
+    schema = {}
+    for field in fields:
+        if field["type"].value == "object":
+            schema[field["name"]] = prepare_schema(field["children"])
+        else:
+            schema[field["name"]] = {"type": field["type"].value, "description": field["description"] }
+    return schema
+
+@router.post("/{project_id}/process", response_model=ListResponse)
 async def process(
     project_id: UUID,
-    current_user: User = Depends(get_current_verified_user),
+    params: Dict[str, Any] = Depends(get_query_params),
+    current_user: User = Depends(require_scope("process:projects")),
     db: Session = Depends(get_db)
 ):
     """
@@ -142,7 +148,7 @@ async def process(
         model=Project,
         id=project_id
     )
-    if project.owner_id != current_user.id:
+    if project.owner != current_user and not current_user.has_scope("admin"):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update receipt data in this project"
@@ -163,81 +169,15 @@ async def process(
         model_name="gpt-4.1-nano-2025-04-14",
         api_key=settings.openai_api_key
     )
-    schema = {field.name: {"type": field.type, "description": field.description } for field in project.fields}
+    schema = prepare_schema([FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent])
+    print(schema)
     for receipt in project.receipts:
-        if receipt.status == "pending":
-            receipt.process(extractor, schema)
-        
-    return project.receipts
-
-@router.get("/{project_id}/data", response_model=List[Dict])
-async def get_project_data(
-    project_id: UUID,
-    current_user: User= Depends(get_current_verified_user),
-    db: Session = Depends(get_db)
-):
-    """
-        Download receipt data
-    """
-    project: Project = await crud.get_obj_or_404(
+        if receipt.status in ["pending", "completed","failed"]:
+            receipt.process(db=db,extractor=extractor, schema_dict=schema)
+    params["project_id"] = project.id
+    return await crud.paginate(
         db=db,
-        model=Project,
-        id=project_id
+        model=Receipt,
+        schema=ReceiptResponse,
+        **params
     )
-    if project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access data in this project"
-        )
-    receipt_data = []
-    for receipt in project.receipts:
-        receipt_data.append({
-            "receipt_id": receipt.id,
-            "receipt_path": receipt.file_path,
-            "data": [
-                {
-                    "name": data_value.field.name,
-                    "description": data_value.field.description,
-                    "value": data_value.value
-                } for data_value in receipt.data_values
-            ]
-        })
-    return receipt_data
-
-@router.get("/{project_id}/data/csv")
-async def export_project_data_csv(
-    project_id: UUID,
-    current_user: User = Depends(get_current_verified_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Export receipt data as a CSV file
-    """
-    project: Project = await crud.get_obj_or_404(
-        db=db,
-        model=Project,
-        id=project_id
-    )
-    if project.owner_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to export data from this project"
-        )
-
-    output = io.StringIO()
-    writer = csv.writer(output)
-    field_names = [field.name for field in project.fields]
-    writer.writerow(["receipt_id", "receipt_path"] + field_names)
-    for receipt in project.receipts:
-        field_values = {dv.field.name: dv.value for dv in receipt.data_values}
-        row = [str(receipt.id), receipt.file_path]
-        row.extend(field_values.get(field_name, "") for field_name in field_names)
-        writer.writerow(row)
-    output.seek(0)
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={
-            "Content-Disposition": f"attachment; filename=receipt_data_{project_id}.csv"
-        }
-    ) 
