@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
-from app.models import Model
+from app.models import Model, subscriptions
 from app.config import logger, settings
 from app.utils import random_string
 
@@ -62,6 +62,8 @@ class User(Model):
         back_populates='users'
     )
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="user", cascade="all, delete-orphan") # type: ignore
+    subscriptions: Mapped[List["Subscription"]] = relationship("Subscription", back_populates="user", cascade="all, delete-orphan") # type: ignore
 
     def set_password(self, password: str) -> None:
         """
