@@ -29,6 +29,9 @@ COPY . .
 # Create uploads directory
 RUN mkdir -p uploads
 
+# Create exports directory
+RUN mkdir -p exports
+
 # Expose port
 EXPOSE 8000
 

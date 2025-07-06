@@ -8,17 +8,9 @@ services:
     volumes:
       - .:/app
       - ./uploads:/app/uploads
+      - ./exports:/app/exports
     env_file:
       - .env
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_DB=${POSTGRES_DB:-receiptiq}
-      - POSTGRES_HOST=postgres
-      - POSTGRES_PORT=5432
-      - SECRET_KEY=${SECRET_KEY}
-      - HONEYBADGER_API_KEY=${HONEYBADGER_API_KEY}
-      - MAILTRAP_API_KEY=${MAILTRAP_API_KEY}
     depends_on:
       - postgres
     networks:

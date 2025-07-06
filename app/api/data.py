@@ -79,7 +79,7 @@ async def export_project_data_csv(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to export data from this project"
         )
-    path: str = f"{project.name}_{project.id}.csv"
+    path: str = f"exports/{project.name}_{project.id}.csv"
     with open(path,mode="w", newline="") as output:
         writer = csv.writer(output, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
         field_names = [f"{field.name}" for field in project.fields if field.type != FieldType.OBJECT]
