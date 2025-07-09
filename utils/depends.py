@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, Header, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from sqlalchemy.orm import Session, sessionmaker
-from models import Subscription
+from models.subscriptions import Subscription
 from models.auth import RevokedToken,User
 from config import settings, logger
 

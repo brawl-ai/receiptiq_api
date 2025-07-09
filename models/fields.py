@@ -1,7 +1,7 @@
 import uuid
 import datetime
 from typing import List, Optional
-from sqlalchemy import String, DateTime, ForeignKey
+from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column,relationship
 from sqlalchemy.dialects.postgresql import UUID
 from models import Model
@@ -30,6 +30,10 @@ class Field(Model):
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("fields.id"))
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now)
     updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, onupdate=datetime.datetime.now)
+
+    __table_args__ = (
+        UniqueConstraint('name', 'project_id', name='uq_field_name_project'),
+    )
 
     project: Mapped["Project"] = relationship("Project", back_populates="fields") # type: ignore
     parent: Mapped[Optional["Field"]] = relationship("Field", back_populates="children", remote_side=[id])
