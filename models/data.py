@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column,relationship
 from sqlalchemy.dialects.postgresql import UUID
-from app.models import Model
+from models import Model
 from typing import Dict, Optional, Any
 from sqlalchemy import DateTime, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship

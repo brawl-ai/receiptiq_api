@@ -2,24 +2,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any, Dict, List
 
 from sqlalchemy.orm import Session
-from app import crud
-from app.schemas import FieldResponse
-from app.depends import get_db, get_query_params, require_scope
-from app.extractor import InvoiceExtractor
-from app.models.projects import Project, Receipt
-from app.schemas import ListResponse
-from app.schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
-from app.schemas.receipts import ReceiptResponse
-from app.models import User
+from utils import get_obj_or_404, paginate, require_subscription
+from schemas import FieldResponse
+from utils import get_db, get_query_params, require_scope, InvoiceExtractor
+from models.projects import Project, Receipt
+from schemas import ListResponse
+from schemas.projects import ProjectCreate, ProjectResponse, ProjectUpdate
+from schemas.receipts import ReceiptResponse
+from models import User
 from uuid import UUID
-from app.config import settings
+from config import settings
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 @router.post("", response_model=ProjectResponse)
 async def create_project(
     project_in: ProjectCreate,
-    current_user: User = Depends(require_scope("write:projects")),
+    current_user: User = Depends(require_subscription("write:projects")),
     db: Session = Depends(get_db)
 ):
     """
@@ -46,7 +45,7 @@ async def list_filter_search_projects(
     """
     if not current_user.has_scope("admin"):
         params["owner_id"] = current_user.id
-    return await crud.paginate(
+    return await paginate(
         db=db,
         model=Project,
         schema=ProjectResponse,
@@ -62,7 +61,7 @@ async def get_project(
     """
     Get a specific project by ID
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -78,13 +77,13 @@ async def get_project(
 async def update_project(
     project_id: UUID,
     project_update_in: ProjectUpdate,
-    current_user: User = Depends(require_scope("write:projects")),
+    current_user: User = Depends(require_subscription("write:projects")),
     db: Session = Depends(get_db)
 ):
     """
     Update a project
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -104,13 +103,13 @@ async def update_project(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: UUID,
-    current_user: User = Depends(require_scope("delete:projects")),
+    current_user: User = Depends(require_subscription("delete:projects")),
     db: Session = Depends(get_db),
 ):
     """
     Delete a project
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -137,13 +136,13 @@ def prepare_schema(fields: List):
 async def process(
     project_id: UUID,
     params: Dict[str, Any] = Depends(get_query_params),
-    current_user: User = Depends(require_scope("process:projects")),
+    current_user: User = Depends(require_subscription("process:projects")),
     db: Session = Depends(get_db)
 ):
     """
     Process each "pending" receipt in the project
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -175,7 +174,7 @@ async def process(
         if receipt.status in ["pending", "completed","failed"]:
             receipt.process(db=db,extractor=extractor, schema_dict=schema)
     params["project_id"] = project.id
-    return await crud.paginate(
+    return await paginate(
         db=db,
         model=Receipt,
         schema=ReceiptResponse,

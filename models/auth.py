@@ -1,6 +1,8 @@
 import datetime
 import hashlib
+import random
 import secrets
+import string
 from typing import Any, Dict, List, Optional, Tuple
 import uuid
 from fastapi import HTTPException
@@ -9,10 +11,8 @@ from passlib.context import CryptContext
 from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Table
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
-from app.models import Model
-from app.config import logger, settings
-from app.utils import random_string
-
+from models import Model
+from config import logger, settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -62,6 +62,8 @@ class User(Model):
         back_populates='users'
     )
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="user", cascade="all, delete-orphan") # type: ignore
+    subscriptions: Mapped[List["Subscription"]] = relationship("Subscription", back_populates="user", cascade="all, delete-orphan") # type: ignore
 
     def set_password(self, password: str) -> None:
         """
@@ -82,7 +84,7 @@ class User(Model):
         """
         Create the verification code for the user and set it's expiry date and time
         """
-        self.otp = random_string(length=code_length)
+        self.otp = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(code_length))
         self.otp_expiry_at = datetime.datetime.now() + datetime.timedelta(seconds=code_expiry_seconds)
         db.add(self)
         db.commit()

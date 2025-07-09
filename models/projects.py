@@ -10,7 +10,7 @@ from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship, Session
 from sqlalchemy.dialects.postgresql import UUID
 
-from app.models import Model
+from models import Model
 from .auth import User
 from .fields import Field, FieldType
 from .receipts import Receipt

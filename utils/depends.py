@@ -2,13 +2,14 @@ import base64
 from datetime import datetime, timezone
 import hashlib
 from typing import Annotated, Any, Dict, Optional, Tuple
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, func, select
 from fastapi import Depends, HTTPException, Header, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from sqlalchemy.orm import Session, sessionmaker
-from app.models import RevokedToken,User
-from app.config import settings, logger
+from models import Subscription
+from models.auth import RevokedToken,User
+from config import settings, logger
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
@@ -125,6 +126,22 @@ def require_scope(required_scope: str):
             )
         return current_user
     return scope_checker
+
+def require_subscription(required_scope: str):
+    def subscription_checker(scoped_user: User= Depends(require_scope(required_scope)), db: Session = Depends(get_db)):
+        subscription: Subscription = db.execute(select(Subscription)
+                                    .where(
+                                        Subscription.user_id == scoped_user.id,
+                                        Subscription.end_at > func.now()  # Check if subscription is active
+                                    )).scalar_one_or_none()
+        if subscription:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"You do not have an active subscription"
+            )
+        return scoped_user
+
+    return subscription_checker
 
 async def get_query_params(
     request: Request,

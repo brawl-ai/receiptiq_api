@@ -19,3 +19,4 @@ from .projects import *
 from .fields import *
 from .receipts import *
 from .data import *
+from .subscriptions import *

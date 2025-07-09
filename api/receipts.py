@@ -3,11 +3,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.depends import get_db, get_query_params, require_scope
-from app.models import User, Project, Receipt
-from app.schemas import ReceiptResponse, ReceiptUpdate, ListResponse
-from app.utils import save_upload_file
-from app import crud
+from models import User, Project, Receipt
+from schemas import ReceiptResponse, ReceiptUpdate, ListResponse
+from utils import get_obj_or_404, paginate, get_db, get_query_params, require_scope, require_subscription, save_upload_file
 
 router = APIRouter(prefix="/projects/{project_id}/receipts", tags=["Receipts"])
 
@@ -15,13 +13,13 @@ router = APIRouter(prefix="/projects/{project_id}/receipts", tags=["Receipts"])
 async def create_receipt(
     project_id: UUID,
     file: UploadFile = File(...),
-    current_user: User = Depends(require_scope("write:receipts")),
+    current_user: User = Depends(require_subscription("write:receipts")),
     db: Session = Depends(get_db)
 ):
     """
     Create a new receipt in a project
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -56,7 +54,7 @@ async def list_receipts(
     """
     List all receipts in a project, optionally filtered by status
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -67,7 +65,7 @@ async def list_receipts(
             detail="Not authorized to access receipts in this project"
         )
     params["project_id"] = project_id
-    return await crud.paginate(
+    return await paginate(
         db=db,
         model=Receipt,
         schema=ReceiptResponse,
@@ -84,7 +82,7 @@ async def get_receipt(
     """
     Get a specific receipt by ID in a project
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -94,7 +92,7 @@ async def get_receipt(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to access receipts in this project"
         )
-    receipt: Receipt = await crud.get_obj_or_404(
+    receipt: Receipt = await get_obj_or_404(
         db=db,
         model=Receipt,
         id=receipt_id
@@ -111,13 +109,13 @@ async def update_receipt(
     project_id: UUID,
     receipt_id: UUID,
     status_update: ReceiptUpdate,
-    current_user: User = Depends(require_scope("write:receipts")),
+    current_user: User = Depends(require_subscription("write:receipts")),
     db: Session = Depends(get_db)
 ):
     """
     Update a receipt's status
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -127,7 +125,7 @@ async def update_receipt(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to update receipts in this project"
         )
-    receipt: Receipt = await crud.get_obj_or_404(
+    receipt: Receipt = await get_obj_or_404(
         db=db,
         model=Receipt,
         id=receipt_id

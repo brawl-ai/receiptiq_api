@@ -10,10 +10,11 @@ from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship, Session
 from sqlalchemy.dialects.postgresql import UUID
 
-from app.extractor import InvoiceExtractor
-from app.models import Model
+from utils import InvoiceExtractor
+from models import Model
 from .data import DataValue
 from .fields import Field
+
 
 class Receipt(Model):
     __tablename__ = "receipts"

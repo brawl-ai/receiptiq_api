@@ -1,20 +1,16 @@
 import csv
-import io
-import pprint
 from uuid import UUID
 from typing import List, Dict
-from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.models import FieldType, User, Project
-from app.depends import require_scope, get_db
-from app import crud
-from app.models.data import DataValue
-from app.models.fields import Field
-from app.models.receipts import Receipt
-from app.schemas import FieldResponse
+from models import FieldType, User, Project
+from utils import get_obj_or_404, require_scope, get_db, require_subscription
+from models.data import DataValue
+from models.fields import Field
+from models.receipts import Receipt
+from schemas import FieldResponse
 
 router = APIRouter(prefix="/projects/{project_id}/data", tags=["Receipts"])
 
@@ -27,7 +23,7 @@ async def get_project_data(
     """
         Download receipt data
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id
@@ -63,13 +59,13 @@ async def get_project_data(
 @router.get("/csv")
 async def export_project_data_csv(
     project_id: UUID,
-    current_user: User = Depends(require_scope("export:data")),
+    current_user: User = Depends(require_subscription("export:data")),
     db: Session = Depends(get_db)
 ):
     """
     Export receipt data as a CSV file
     """
-    project: Project = await crud.get_obj_or_404(
+    project: Project = await get_obj_or_404(
         db=db,
         model=Project,
         id=project_id

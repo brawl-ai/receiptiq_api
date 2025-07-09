@@ -3,9 +3,9 @@ from fastapi import HTTPException, Query
 from pydantic import UUID4, BaseModel
 from sqlalchemy import exc, or_, select
 from sqlalchemy.orm import Session
-from app.models import Model
-from app.schemas import ListResponse
-from app.config import logger
+from models import Model
+from schemas import ListResponse
+from config import logger
 
 async def get_obj_or_404(db: Session, model: Model, id: UUID4) -> Model:
     """

@@ -1,20 +1,17 @@
 import hashlib
+import hmac
 import random
 import re
 import secrets
 import string
 from typing import List, Tuple
-from fastapi import UploadFile
+from fastapi import HTTPException, Request, UploadFile
 from pathlib import Path
 import resend
-from .config import settings, logger
+import requests
+from config import settings, logger
 
 resend.api_key = settings.resend_api_key
-
-def random_string(length: int = 5) -> str:
-    """Generate a random string of fixed length"""
-    letters = string.ascii_uppercase + string.digits
-    return ''.join(random.choice(letters) for _ in range(length))
 
 def generate_reset_token(length: int = 32) -> str:
     """Generate a cryptographically secure reset token"""
@@ -154,3 +151,104 @@ class PasswordValidator:
             errors.append("Password is too common")
         
         return len(errors) == 0, errors
+    
+def create_paystack_subscription_plan(name: str, interval: str, amount: int, currency: str):
+    url=f"{settings.paystack_base_url}/plan"
+    headers={
+        "Authorization": f"Bearer {settings.paystack_secret_key}",
+        "Content-Type": "application/json"
+    }
+    data={ 
+        "name": name, 
+        "interval": interval, 
+        "amount": amount*100,
+        "currency": currency,
+    }
+    response = requests.post(
+        url=url,
+        headers=headers,
+        json=data
+    )
+    logger.debug(f"create_paystack_subscription_plan response: {response.status_code} {response.json()}")
+    if response.ok and response.json()["status"] == True:
+        return response.json()["data"]
+    else:
+        raise Exception(response.text)
+    
+def get_paystack_plans():
+    url=f"{settings.paystack_base_url}/plan"
+    headers={
+        "Authorization": f"Bearer {settings.paystack_secret_key}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(
+        url=url,
+        headers=headers
+    )
+    logger.debug(f"get_paystack_plans response: {response.status_code} {response.json()}")
+    if response.ok and response.json()["status"] == True:
+        return response.json()["data"]
+    else:
+        raise Exception(response.text)
+    
+async def initiate_paystack_payment(email: str, amount: float, currency: str, plan:str):
+    """
+        Initiates paystack payment
+    """
+    url=f"{settings.paystack_base_url}/transaction/initialize"
+    headers={
+        "Authorization": f"Bearer {settings.paystack_secret_key}",
+        "Content-Type": "application/json"
+    }
+    data={ 
+        "email": f"{email}", 
+        "amount": f"{amount*100}",
+        "currency": f"{currency}",
+        "plan": f"{plan}"
+    }
+    response = requests.post(
+        url=url,
+        headers=headers,
+        json=data
+    )
+    logger.debug(f"initiate_paystack_payment response {response.status_code} {response.json()}")
+    if response.ok and response.json()["status"]:
+        return response.json()["data"]
+    else:
+        raise Exception(response.text)
+    
+async def get_paystack_subscription_link(subscription_code: str):
+    """
+        Gets paystack subscription management link
+    """
+    url=f"{settings.paystack_base_url}/subscription/{subscription_code}/manage/link"
+    headers={
+        "Authorization": f"Bearer {settings.paystack_secret_key}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(
+        url=url,
+        headers=headers
+    )
+    logger.debug(f"get_paystack_subscription_link response {response.status_code} {response.json()}")
+    if response.ok and response.json()["status"]:
+        return response.json()["data"]
+    else:
+        raise Exception(response.text)
+    
+
+async def verify_paystack_signature(request: Request):   
+    signature = request.headers.get("x-paystack-signature")
+    if not signature:
+        logger.warning(f"Paystack playload signature `x-paystack-signature` not found")
+        raise HTTPException(status_code=400, detail="Missing signature")
+    body = await request.body()
+    hash_value = hmac.new(
+        settings.paystack_secret_key.encode('utf-8'),
+        body,
+        hashlib.sha512
+    ).hexdigest()
+    if not hash_value == signature:
+        logger.warning(f"Invalid signature")
+        raise HTTPException(status_code=400, detail="Invalid signature")
+

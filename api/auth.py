@@ -7,17 +7,15 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.models import AuditLog, LoginAttempt, PasswordResetToken, Permission, RefreshToken, RevokedToken, User
-from app.schemas import ForgotPasswordRequest, ForgotPasswordResponse, RefreshTokenRequest, RefreshTokenResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeTokenRequest, UserUpdate
-from app.schemas.auth import (
+from models import AuditLog, LoginAttempt, PasswordResetToken, Permission, RefreshToken, RevokedToken, User
+from schemas import ForgotPasswordRequest, ForgotPasswordResponse, RefreshTokenRequest, RefreshTokenResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeTokenRequest, UserUpdate
+from schemas.auth import (
     UserCreate, UserResponse, TokenResponse,
     VerificationCodeRequest, VerificationCodeResponse,
     VerifyCodeRequest, LoginRequest, PasswordUpdate
 )
-from app.utils import PasswordValidator, generate_reset_token, hash_token, send_password_reset_email, send_verification_email
-from app.depends import get_app, get_current_user, get_db, require_scope
-from app.config import settings, logger
-from app.rate_limiter import limiter
+from utils import PasswordValidator, generate_reset_token, hash_token, send_password_reset_email, send_verification_email, get_app, get_current_user, get_db, require_scope, limiter
+from config import settings, logger
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

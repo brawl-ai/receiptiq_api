@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import FieldType
+from models.fields import FieldType
 
 
 class AddFieldRequest(BaseModel):

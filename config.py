@@ -1,6 +1,5 @@
 import logging
-import honeybadger
-from honeybadger import Honeybadger, contrib, honeybadger
+from honeybadger import Honeybadger, contrib
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -30,7 +29,8 @@ class Settings(BaseSettings):
     resend_api_key: str
     email_from: str
     email_reply_to: str
-
+    paystack_secret_key: str
+    paystack_base_url: str
     
     @property
     def database_url(self) -> str:
@@ -43,7 +43,7 @@ hb = Honeybadger()
 hb.configure(environment=settings.environment, api_key=settings.honeybadger_api_key,force_report_data=True)
 hb_handler = contrib.HoneybadgerHandler(api_key=settings.honeybadger_api_key)
 hb_handler.honeybadger = hb
-hb_handler.setLevel(logging.WARN)
+hb_handler.setLevel(logging.INFO)
 hb_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 logger.addHandler(hb_handler)
 
@@ -61,5 +61,10 @@ permissions = [
     ('Read Receipts','read:receipts'),
     ('Create/Update Receipts','write:receipts'),
     ('Read Data','read:data'),
-    ('Export Data','export:data')
+    ('Export Data','export:data'),
+]
+
+subscription_plans = [
+    ('Standard Monthly','1k invoices per month',10.00, "KES","monthly",0,"ACTIVE"),
+    ('Standard Annually','1.1k invoices per month',8, "KES","annually",0,"ACTIVE")
 ]
