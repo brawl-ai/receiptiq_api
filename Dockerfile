@@ -13,10 +13,10 @@ RUN apt-get update && apt-get install -y \
     gnupg2 \
     tesseract-ocr \
     libtesseract-dev \
+    postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
-
-# Test that it works
+# Test that tesseract works
 RUN tesseract --version
 
 # Copy requirements first to leverage Docker cache
@@ -26,15 +26,19 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Create necessary directories
+RUN mkdir -p uploads exports
 
-# Create exports directory
-RUN mkdir -p exports
+# Copy and make entrypoint script executable
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Expose port
 EXPOSE 8000
 
-# Command to run the application
-ENV PYTHONDONTWRITEBYTECODE=1
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"] 
+# Use entrypoint script
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
