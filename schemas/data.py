@@ -10,8 +10,7 @@ class DataValueCreate(BaseModel):
     field_id: UUID
 
 class DataValueUpdate(BaseModel):
-    value: Optional[str]
-    field_id: Optional[UUID]
+    value: str
 
 class DataValueResponse(BaseModel):
     id: UUID
