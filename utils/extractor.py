@@ -68,7 +68,7 @@ class InvoiceExtractor:
         text, coordinates = self.extract_text_from_document(document_path)
         if not text.strip():
             raise ValueError("No text could be extracted from the document")
-        extracted_data = self.llm_extract_data(text, schema, extraction_instructions)
+        extracted_data = self.llm_extract_data(text, coordinates, schema, extraction_instructions)
         metadata = {
             'source_file': document_path,
             'extraction_method': f"{self.llm_provider}:{self.model_name}",
@@ -78,7 +78,7 @@ class InvoiceExtractor:
         }
         return extracted_data, metadata
     
-    def extract_text_from_document(self, document_path: str) -> tuple[str, Dict]:
+    def extract_text_from_document(self, document_path: str) -> tuple[str, List]:
         """Extract text from PDF or image document"""
         file_ext = Path(document_path).suffix.lower()
         if file_ext == '.pdf':
@@ -88,7 +88,7 @@ class InvoiceExtractor:
         else:
             raise ValueError(f"Unsupported file format: {file_ext}. Supported: PDF, JPG, PNG, TIFF, BMP")
     
-    def extract_from_pdf(self, pdf_path: str) -> tuple[str, Dict]:
+    def extract_from_pdf(self, pdf_path: str) -> tuple[str, List]:
         """Extract text from PDF with coordinate information"""
         text, char_coodinates, word_coordinates = "",{}, []
         try:
@@ -154,7 +154,7 @@ class InvoiceExtractor:
         
         return text, word_coordinates
     
-    def extract_from_image(self, image_path: str) -> tuple[str, Dict]:
+    def extract_from_image(self, image_path: str) -> tuple[str, List]:
         """Extract text from image using OCR"""
         try:
             image = cv2.imread(image_path)
@@ -186,12 +186,13 @@ class InvoiceExtractor:
     
     def llm_extract_data(self, 
                         text: str, 
+                        coordinates: List, 
                         schema: Dict[str, Any],
                         instructions: Optional[str] = None) -> Dict[str, Any]:
         """Use LLM to extract structured data from text based on schema"""
         
         # Build the prompt
-        prompt = self.build_extraction_prompt(text, schema, instructions)
+        prompt = self.build_extraction_prompt(text, coordinates, schema, instructions)
         
         # Call appropriate LLM
         if self.llm_provider == "openai":
@@ -205,16 +206,20 @@ class InvoiceExtractor:
     
     def build_extraction_prompt(self, 
                                text: str, 
+                               coordinates: List, 
                                schema: Dict[str, Any],
                                instructions: Optional[str] = None) -> str:
         """Build prompt for LLM extraction"""
         
-        schema_description = self.describe_schema(schema)
-        base_instructions = instructions or """
+        data_schema = self.describe_schema(schema)
+        print(f"JSON SCHEMA: {data_schema}")
+        base_instructions = f"""
         You are an expert at extracting structured data from invoice documents.
         Extract the requested information accurately and return it as valid JSON.
         If a field cannot be found, use null or an appropriate default value.
-        Be precise with numbers and dates.
+        Be precise with numbers and dates. 
+        Use the TEXT COORDINATES to estimate the coordinates of the values. The text part contains the character or group of characters. The x shows the x coordinate and y the line. The height is the height of the characters. The width can be computed from looking at the full value.  The coordinates of the value can be calculated from checking the start and end chunks
+        {instructions}
         """
         prompt = f"""
 {base_instructions}
@@ -222,8 +227,11 @@ class InvoiceExtractor:
 DOCUMENT TEXT:
 {text}
 
+TEXT COORDINATES:
+{coordinates}
+
 REQUIRED SCHEMA:
-{schema_description}
+{data_schema}
 
 Extract the data that matches the schema from the document text above.
 Return ONLY valid JSON that matches the schema structure.
@@ -236,19 +244,20 @@ JSON Response:
     
     def describe_schema(self, schema: Dict[str, Any]) -> str:
         """Convert schema dictionary to description for LLM"""
+        coordinates_schema = '{ "x": x coodinate of the first letter,"y": y coodinate of the line, "width": width of the whole segment,"height": height of the whole line }'
         description = "{\n"
         for key, value in schema.items():
             if 'type' in value: # is this the leaf
                 field_type = value['type']
                 field_desc = value.get('description', '')
-                description += f'  "{key}": {field_type} // {field_desc} ,\n'
+                description += f'  "{key}": {{\n "value": {field_type} // {field_desc}, "coordinates": {coordinates_schema}  }},\n'
             else: # Nested object
                 description += f'  "{key}": '
                 description += self.describe_schema(value)
         
         description = description.rstrip(',\n') + '\n}'
         return description
-    
+
     def call_openai(self, prompt: str) -> Dict[str, Any]:
         """Call OpenAI API for extraction"""
         try:
