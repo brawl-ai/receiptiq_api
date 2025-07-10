@@ -22,6 +22,10 @@ class ReceiptField(BaseModel):
 class ReceiptData(BaseModel):
     id: UUID
     value: str
+    x: int
+    y: int
+    width: int
+    height: int
     field: ReceiptField
 
     model_config = ConfigDict(from_attributes=True)
