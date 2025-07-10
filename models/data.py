@@ -18,6 +18,7 @@ class DataValue(Model):
     field_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("fields.id"))
     receipt_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("receipts.id"))
     value: Mapped[str] = mapped_column(String(300),nullable=False)
+    row: Mapped[int] = mapped_column(Integer,default=0, nullable=True)
     x: Mapped[int] = mapped_column(Integer,default=0)
     y: Mapped[int] = mapped_column(Integer,default=0)
     width: Mapped[int] = mapped_column(Integer,default=0)
@@ -29,3 +30,12 @@ class DataValue(Model):
 
     field: Mapped["Field"] = relationship("Field", back_populates="data_values") # type: ignore
     receipt: Mapped["Receipt"] = relationship("Receipt", back_populates="data_values") # type: ignore
+
+    @property
+    def fully_name(self):
+        name = self.field.name
+        parent = self.field.parent
+        while parent:
+            name = f"{parent.name}_{name}" if parent.type != "array" else f"{parent.name}_{name}_{self.row}"
+            parent = parent.parent
+        return name
