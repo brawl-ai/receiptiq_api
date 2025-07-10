@@ -1,17 +1,26 @@
 import hashlib
 import hmac
-import random
 import re
 import secrets
-import string
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from fastapi import HTTPException, Request, UploadFile
 from pathlib import Path
 import resend
 import requests
+import contextvars
+
 from config import settings, logger
 
 resend.api_key = settings.resend_api_key
+request_context: contextvars.ContextVar[Optional[Request]] = contextvars.ContextVar('request', default=None)
+
+def get_current_request() -> Optional[Request]:
+    """Helper function to get the current request from context"""
+    return request_context.get()
+
+def set_current_request(request: Request) -> None:
+    """Helper function to set the current request in context"""
+    request_context.set(request)
 
 def generate_reset_token(length: int = 32) -> str:
     """Generate a cryptographically secure reset token"""
