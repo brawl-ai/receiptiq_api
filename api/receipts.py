@@ -1,13 +1,15 @@
-from typing import Any, Dict, List
+import io
+from typing import Any, Dict
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from models import User, Project, Receipt
 from schemas import ReceiptResponse, ReceiptUpdate, ListResponse
-from utils import get_obj_or_404, paginate, get_db, get_query_params, require_scope, require_subscription, save_upload_file
+from utils import get_obj_or_404, paginate, get_db, get_query_params, require_scope, require_subscription, StorageService
 
 router = APIRouter(prefix="/projects/{project_id}/receipts", tags=["Receipts"])
+storage = StorageService()
 
 @router.post("/", response_model=ReceiptResponse)
 async def create_receipt(
@@ -29,12 +31,27 @@ async def create_receipt(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to create receipts in this project"
         )
+    
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "application/pdf"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file type. Only JPEG, PNG, GIF, and PDF files are allowed."
+        )
+    
+    max_size = 10 * 1024 * 1024  # 10MB
+    file_content = await file.read()
+    if len(file_content) > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File too large. Maximum size is 10MB."
+        )
     try:
-        file_path, file_name = await save_upload_file(file, project_id)
+        file_path = storage.upload_receipt(project_id=project.id, file=io.BytesIO(file_content), filename=file.filename)
         receipt: Receipt = project.add_receipt(
             db=db,
             file_path=file_path,
-            file_name=file_name,
+            file_name=f"{file.filename}",
             mime_type=file.content_type
         )
         return receipt
