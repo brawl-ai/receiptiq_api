@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     email_reply_to: str
     paystack_secret_key: str
     paystack_base_url: str
+    aws_access_key_id: str
+    aws_endpoint_url_s3: str
+    aws_region: str
+    aws_secret_access_key: str
+    bucket_name: str
     
     @property
     def database_url(self) -> str:

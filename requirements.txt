@@ -19,3 +19,4 @@ passlib[bcrypt]==1.7.4
 slowapi==0.1.9
 resend==2.10.0
 alembic==1.16.1
+boto3==1.39.3
