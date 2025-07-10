@@ -34,19 +34,20 @@ class Receipt(Model):
     project: Mapped["Project"] = relationship("Project", back_populates="receipts") # type: ignore
     data_values: Mapped[List[DataValue]] = relationship("DataValue", back_populates="receipt", cascade="all, delete-orphan")
 
-    def add_data(self, db: Session, result: Dict = None):
+    def add_data(self, db: Session, result: Dict = None, row_id: int = 0):
         """
         Add a new data value to the receipt
         """
         for field_name, value in result.items():
-            field = db.execute(select(Field).where(Field.project_id == self.project_id, Field.name == field_name)).scalar_one_or_none()
+            field: Field = db.execute(select(Field).where(Field.project_id == self.project_id, Field.name == field_name)).scalar_one_or_none()
             if field and len(field.children) == 0:
-                data_value = db.execute(select(DataValue).where(DataValue.field_id == field.id, DataValue.receipt_id == self.id)).scalar_one_or_none()
+                data_value = db.execute(select(DataValue).where(DataValue.field_id == field.id, DataValue.receipt_id == self.id, DataValue.row == row_id)).scalar_one_or_none()
                 if not data_value:
                     data_value = DataValue()
                 data_value.field=field
                 data_value.receipt=self
                 data_value.value=value["value"]
+                data_value.row=row_id
                 data_value.x=value["coordinates"].get("x",0)
                 data_value.y=value["coordinates"].get("y",0)
                 data_value.width=value["coordinates"].get("width",0)
@@ -55,7 +56,11 @@ class Receipt(Model):
                 db.commit()
                 db.refresh(data_value)
             else:
-                self.add_data(db, value)
+                if isinstance(value, list):
+                    for id,item in enumerate(value):
+                        self.add_data(db, item, row_id=id)
+                else:
+                    self.add_data(db, value)
     
     def localize(self):
         temp_local_path = f"temp/{self.file_path}"
@@ -77,7 +82,6 @@ class Receipt(Model):
                 schema=schema_dict,
                 extraction_instructions="Focus on accuracy for financial amounts and dates."
             )
-            print(f"RESULT: {result}")
             self.status = "processing"
             db.add(self)
             db.flush()
