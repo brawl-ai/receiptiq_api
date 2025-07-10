@@ -5,8 +5,6 @@ services:
       - "9000:8000"
     volumes:
       - .:/app
-      - ./uploads:/app/uploads
-      - ./exports:/app/exports
     env_file:
       - .env
     depends_on:
