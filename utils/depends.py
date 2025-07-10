@@ -134,7 +134,7 @@ def require_subscription(required_scope: str):
                                         Subscription.user_id == scoped_user.id,
                                         Subscription.end_at > func.now()  # Check if subscription is active
                                     )).scalar_one_or_none()
-        if subscription:
+        if not subscription:
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail=f"You do not have an active subscription"
