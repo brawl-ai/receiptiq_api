@@ -3,7 +3,7 @@ import io
 import os
 from uuid import UUID
 from typing import List, Dict
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
@@ -38,15 +38,30 @@ async def get_project_data(
             detail="Not authorized to access data in this project"
         )
     
-    def get_extracted_data(fields: List[Field],  receipt: Receipt):
+    def get_extracted_data(fields: List[Field],  receipt: Receipt, row_id: int = 0):
         data = {}
         for field in fields:
             if field["type"].value == "object":
                 data[field["name"]] = get_extracted_data(field["children"], receipt)
+            if field["type"].value == "array":
+                items = []
+                rows = db.execute(select(
+                        DataValue.row,
+                        func.count(DataValue.id),
+                        func.array_agg(DataValue.value)
+                    ).group_by(DataValue.row)).scalars().all()
+                for row in rows:
+                    items.append(get_extracted_data(field["children"],receipt, row_id=row))
+                data[field["name"]] = items
             else:
-                data_value = db.execute(select(DataValue).where(DataValue.field_id == field["id"], DataValue.receipt_id == receipt.id)).scalar_one_or_none()
+                data_value = db.execute(select(DataValue).where(DataValue.field_id == field["id"], DataValue.receipt_id == receipt.id, DataValue.row == row_id)).scalar_one_or_none()
                 if data_value:
-                    data[field["name"]] = {"value": data_value.value,"type": field["type"].value,"description": field["description"]}
+                    data[field["name"]] = {
+                                            "value": data_value.value,
+                                            "type": field["type"].value,
+                                            "description": field["description"],
+                                            "coordinates": {"x": data_value.x,"y":data_value.y,"height": data_value.height, "width":data_value.width}
+                                        }
         return data
 
     receipt_data = []
@@ -61,7 +76,7 @@ async def get_project_data(
     return receipt_data
 
 @router.put("/{data_value_id}", response_model=DataValueResponse)
-async def get_project_data(
+async def update_project_data(
     project_id: UUID,
     data_value_id: UUID,
     data_value_update: DataValueUpdate,
@@ -115,15 +130,21 @@ async def export_project_data_csv(
         )
     try:
         path: str = f"temp/{project.name}_{project.id}.csv"
+        data = []
+        for receipt in project.receipts:
+            row = {
+                "receipt_id": str(receipt.id),
+                "receipt_path": receipt.file_path
+            }
+            for dv in receipt.data_values:
+                row[dv.fully_name] = dv.value
+            data.append(row)
         with open(path,mode="w", newline="") as output:
             writer = csv.writer(output, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            field_names = [f"{field.name}" for field in project.fields if field.type != FieldType.OBJECT]
-            writer.writerow(["receipt_id", "receipt_path"] + field_names)
-            for receipt in project.receipts:
-                field_values = {dv.field.name: dv.value for dv in receipt.data_values}
-                row = [str(receipt.id), receipt.file_path]
-                row.extend(field_values.get(field_name, "") for field_name in field_names)
-                writer.writerow(row)
+            field_names = [k for k,v in data[0].items()]
+            writer.writerow(field_names)
+            for r in data:
+                writer.writerow([v for k,v in r.items()])
         with open(path,"rb") as f:
             file = io.BytesIO(f.read())
         export_storage_path = storage.upload_export(project_id=project.id,file=file,filename="data_export.csv")
