@@ -43,14 +43,17 @@ class Receipt(Model):
             if field and len(field.children) == 0:
                 data_value = db.execute(select(DataValue).where(DataValue.field_id == field.id, DataValue.receipt_id == self.id)).scalar_one_or_none()
                 if not data_value:
-                    data_value = DataValue(
-                        field=field,
-                        receipt=self,
-                        value=value
-                    )
-                    db.add(data_value)
-                    db.commit()
-                    db.refresh(data_value)
+                    data_value = DataValue()
+                data_value.field=field
+                data_value.receipt=self
+                data_value.value=value["value"]
+                data_value.x=value["coordinates"].get("x",0)
+                data_value.y=value["coordinates"].get("y",0)
+                data_value.width=value["coordinates"].get("width",0)
+                data_value.height=value["coordinates"].get("height",0)
+                db.add(data_value)
+                db.commit()
+                db.refresh(data_value)
             else:
                 self.add_data(db, value)
     
@@ -74,6 +77,7 @@ class Receipt(Model):
                 schema=schema_dict,
                 extraction_instructions="Focus on accuracy for financial amounts and dates."
             )
+            print(f"RESULT: {result}")
             self.status = "processing"
             db.add(self)
             db.flush()
