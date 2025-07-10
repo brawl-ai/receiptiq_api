@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+import contextvars
+from typing import Optional
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from honeybadger import honeybadger
 from honeybadger.contrib.fastapi import HoneybadgerRoute
@@ -7,7 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from api import auth, projects, fields, files, receipts, data, subscriptions
 from config import settings, logger
-from utils import limiter
+from utils import limiter, set_current_request
 
 honeybadger.configure(environment=settings.environment, api_key=settings.honeybadger_api_key,force_report_data=True)
 app = FastAPI(
@@ -32,6 +34,12 @@ app.include_router(receipts.router, prefix=settings.api_v1_str)
 app.include_router(data.router, prefix=settings.api_v1_str)
 app.include_router(subscriptions.router, prefix=settings.api_v1_str)
 app.include_router(files.router, prefix="/files")
+
+@app.middleware("http")
+async def set_request_context(request: Request, call_next):
+    set_current_request(request)
+    response = await call_next(request)
+    return response
 
 @app.get(f"{settings.api_v1_str}")
 async def root():

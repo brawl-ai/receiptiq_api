@@ -1,3 +1,4 @@
+import os
 from pprint import pprint
 import uuid
 import datetime
@@ -10,11 +11,12 @@ from sqlalchemy import String, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship, Session
 from sqlalchemy.dialects.postgresql import UUID
 
-from utils import InvoiceExtractor
+from utils import InvoiceExtractor, StorageService
 from models import Model
 from .data import DataValue
 from .fields import Field
 
+storage = StorageService()
 
 class Receipt(Model):
     __tablename__ = "receipts"
@@ -51,14 +53,24 @@ class Receipt(Model):
                     db.refresh(data_value)
             else:
                 self.add_data(db, value)
+    
+    def localize(self):
+        temp_local_path = f"temp/{self.file_path}"
+        storage.download_file(self.file_path, temp_local_path)
+        return temp_local_path
+    
+    def delocalize(self):
+        temp_local_path = f"temp/{self.file_path}"
+        os.remove(temp_local_path)
         
     def process(self, db: Session, extractor: InvoiceExtractor, schema_dict: Dict[str, Any]) -> List[DataValue]:
         """
         Process the receipt using the extractor
         """
         try:
+            temp_local_path = self.localize()
             result,metadata = extractor.extract_from_document(
-                document_path=self.file_path,
+                document_path=temp_local_path,
                 schema=schema_dict,
                 extraction_instructions="Focus on accuracy for financial amounts and dates."
             )
@@ -70,6 +82,7 @@ class Receipt(Model):
             db.add(self)
             db.commit()
             db.refresh(self)
+            self.delocalize()
             return self.data_values
         
         except Exception as e:

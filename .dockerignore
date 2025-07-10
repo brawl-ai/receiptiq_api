@@ -1,8 +1,8 @@
 # flyctl launch added from .gitignore
 **/datasets
+**/temp
 **/.env
 **/env
-**/uploads
 **/*/__pycache__
 **/*/*/__pycache__
 **/notes

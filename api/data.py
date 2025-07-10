@@ -1,19 +1,22 @@
 import csv
+import io
+import os
 from uuid import UUID
 from typing import List, Dict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from models import FieldType, User, Project
 from schemas.data import DataValueResponse, DataValueUpdate
-from utils import get_obj_or_404, require_scope, get_db, require_subscription
+from utils import StorageService, get_obj_or_404, require_scope, get_db, require_subscription
 from models.data import DataValue
 from models.fields import Field
 from models.receipts import Receipt
 from schemas import FieldResponse
 
-router = APIRouter(prefix="/projects/{project_id}/data", tags=["Receipts"])
+router = APIRouter(prefix="/projects/{project_id}/data", tags=["Data"])
+storage = StorageService()
 
 @router.get("", response_model=List[Dict])
 async def get_project_data(
@@ -92,6 +95,7 @@ async def get_project_data(
 
 @router.get("/csv")
 async def export_project_data_csv(
+    request: Request,
     project_id: UUID,
     current_user: User = Depends(require_subscription("export:data")),
     db: Session = Depends(get_db)
@@ -109,16 +113,26 @@ async def export_project_data_csv(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not authorized to export data from this project"
         )
-    path: str = f"exports/{project.name}_{project.id}.csv"
-    with open(path,mode="w", newline="") as output:
-        writer = csv.writer(output, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-        field_names = [f"{field.name}" for field in project.fields if field.type != FieldType.OBJECT]
-        writer.writerow(["receipt_id", "receipt_path"] + field_names)
-        for receipt in project.receipts:
-            field_values = {dv.field.name: dv.value for dv in receipt.data_values}
-            row = [str(receipt.id), receipt.file_path]
-            row.extend(field_values.get(field_name, "") for field_name in field_names)
-            writer.writerow(row)
-    return {
-        "url": path
-    }
+    try:
+        path: str = f"temp/{project.name}_{project.id}.csv"
+        with open(path,mode="w", newline="") as output:
+            writer = csv.writer(output, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+            field_names = [f"{field.name}" for field in project.fields if field.type != FieldType.OBJECT]
+            writer.writerow(["receipt_id", "receipt_path"] + field_names)
+            for receipt in project.receipts:
+                field_values = {dv.field.name: dv.value for dv in receipt.data_values}
+                row = [str(receipt.id), receipt.file_path]
+                row.extend(field_values.get(field_name, "") for field_name in field_names)
+                writer.writerow(row)
+        with open(path,"rb") as f:
+            file = io.BytesIO(f.read())
+        export_storage_path = storage.upload_export(project_id=project.id,file=file,filename="data_export.csv")
+        os.remove(path)
+        return {
+            "url": f"{request.base_url}files/{export_storage_path}"
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save export file: {str(e)}"
+        )
