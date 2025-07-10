@@ -242,18 +242,22 @@ JSON Response:
         
         return prompt
     
-    def describe_schema(self, schema: Dict[str, Any]) -> str:
+    def describe_schema(self, schema: List|Dict[str, Any]) -> str:
         """Convert schema dictionary to description for LLM"""
         coordinates_schema = '{ "x": x coodinate of the first letter,"y": y coodinate of the line, "width": width of the whole segment,"height": height of the whole line }'
         description = "{\n"
         for key, value in schema.items():
-            if 'type' in value: # is this the leaf
-                field_type = value['type']
-                field_desc = value.get('description', '')
-                description += f'  "{key}": {{\n "value": {field_type} // {field_desc}, "coordinates": {coordinates_schema}  }},\n'
-            else: # Nested object
-                description += f'  "{key}": '
-                description += self.describe_schema(value)
+            if isinstance(value, dict): 
+                if value['type'] in ['string','number','boolean']: # is this the leaf
+                    field_type = value['type']
+                    field_desc = value.get('description', '')
+                    description += f'  "{key}": {{\n "value": {field_type} // {field_desc}, "coordinates": {coordinates_schema}  }},\n'
+                else: # Nested object
+                    description += f'  "{key}": '
+                    description += self.describe_schema(value)
+            else:
+                schema0 = value[0]
+                description += f'"{key}":[\n{self.describe_schema(schema0)}\n]'
         
         description = description.rstrip(',\n') + '\n}'
         return description
