@@ -128,6 +128,8 @@ def prepare_schema(fields: List):
     for field in fields:
         if field["type"].value == "object":
             schema[field["name"]] = prepare_schema(field["children"])
+        if field["type"].value == "array":
+            schema[field["name"]] = [prepare_schema(field["children"])]
         else:
             schema[field["name"]] = {"type": field["type"].value, "description": field["description"] }
     return schema
