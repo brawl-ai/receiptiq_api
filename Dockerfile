@@ -27,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p uploads exports
+RUN mkdir -p temp
 
 # Copy and make entrypoint script executable
 COPY entrypoint.sh /entrypoint.sh
@@ -41,4 +41,4 @@ EXPOSE 8000
 
 # Use entrypoint script
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
