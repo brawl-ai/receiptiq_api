@@ -4,7 +4,7 @@ from botocore.exceptions import ClientError
 from typing import BinaryIO
 from uuid import UUID, uuid4
 from datetime import datetime
-from config import get_settings
+from config import get_settings, logger
 
 class StorageService:
     def __init__(self):
@@ -18,11 +18,11 @@ class StorageService:
             if e.response['Error']['Code'] == '404':
                 try:
                     self.s3.create_bucket(Bucket=self.bucket_name)
-                    print(f"Created bucket: {self.bucket_name}")
+                    logger.info(f"Created bucket: {self.bucket_name}")
                 except ClientError as create_error:
-                    print(f"Error creating bucket: {create_error}")
+                    logger.info(f"Error creating bucket: {create_error}")
             else:
-                print(f"Error checking bucket: {e}")
+                logger.info(f"Error checking bucket: {e}")
     
     def upload_receipt(self, project_id: UUID, file: BinaryIO, filename: str) -> str:
         """Upload receipt file and return the object key"""
@@ -55,7 +55,6 @@ class StorageService:
             )
             return object_key
         except ClientError as e:
-            print(e)
             raise Exception(f"Failed to upload receipt: {e}")
         
     def upload_export(self, project_id: UUID, file: BinaryIO, filename: str) -> str:
@@ -116,7 +115,6 @@ class StorageService:
     def delete_receipt(self, object_key: str) -> bool:
         """Delete a receipt file"""
         settings = get_settings()
-        print(settings)     
         self.s3 = boto3.client(
             's3',
             endpoint_url=settings.aws_endpoint_url_s3 or None,
@@ -130,13 +128,12 @@ class StorageService:
             self.s3.delete_object(Bucket=self.bucket_name, Key=object_key)
             return True
         except ClientError as e:
-            print(f"Error deleting receipt: {e}")
+            logger.info(f"Error deleting receipt: {e}")
             return False
     
     def download_file(self, object_key: str, local_path: str):
         """Download a file"""
         settings = get_settings()
-        # print(settings)       
         self.s3 = boto3.client(
             's3',
             endpoint_url=settings.aws_endpoint_url_s3 or None,
@@ -151,5 +148,5 @@ class StorageService:
             self.s3.download_file(self.bucket_name, object_key, local_path)
             return True
         except ClientError as e:
-            print(f"Error downloading file: {e}")
+            logger.info(f"Error downloading file: {e}")
             return False
