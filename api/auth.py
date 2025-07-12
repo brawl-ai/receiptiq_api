@@ -1,7 +1,5 @@
 import hashlib
-import secrets
-import re
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple
 import datetime
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from slowapi.util import get_remote_address
@@ -15,7 +13,9 @@ from schemas.auth import (
     VerifyCodeRequest, LoginRequest, PasswordUpdate
 )
 from utils import PasswordValidator, generate_reset_token, hash_token, send_password_reset_email, send_verification_email, get_app, get_current_user, get_db, require_scope, limiter
-from config import settings, logger
+from config import get_settings, logger
+
+settings = get_settings()
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -248,6 +248,7 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
     - User must be verified and active
     - Valid client credentials required
     """
+    user = None
     try:        
         if login_request.grant_type != "password":
             raise HTTPException(status.HTTP_400_BAD_REQUEST, {
@@ -304,13 +305,33 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             "scope": " ".join(granted_scopes)
         }
     except Exception as e:
-        if user.failed_login_attempts >= 10:
-            user.lock_account(db=db, minutes=5)
-        else:
-            user.failed_login_attempts += 1
+        if user:
+            if user.failed_login_attempts >= 10:
+                user.lock_account(db=db, minutes=5)
+            else:
+                user.failed_login_attempts += 1
             db.commit()
-        record_login_attempt(http_request=request,email=login_request.username, success=False, db=db)
-        record_security_event(action="LOGIN_FAILED",user_id=user.id, request=request,details={"email": login_request.username, "error": str(e)}, db=db)
+            record_security_event(
+                action="LOGIN_FAILED",
+                user_id=user.id,
+                request=request,
+                details={"email": user.email, "error": str(e)},
+                db=db
+            )
+        else:
+            record_security_event(
+                action="LOGIN_FAILED",
+                user_id=None,
+                request=request,
+                details={"email": login_request.username, "error": str(e)},
+                db=db
+            )
+        record_login_attempt(
+            http_request=request,
+            email=login_request.username,
+            success=False,
+            db=db
+        )
         raise
 
 @router.post("/token/refresh", response_model=RefreshTokenResponse)
@@ -557,7 +578,7 @@ async def update_user_profile(update_payload: UserUpdate,current_user: User = De
 async def logout(
     request: Request,
     token: str = Form(...),
-    current_user: User = Depends(get_current_user),
+    auth: Tuple[User, str] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -576,6 +597,7 @@ async def logout(
     2. Revokes all refresh tokens for the user
     3. User must re-authenticate to get new tokens
     """
+    current_user, scope = auth
     try:
         revoke_token(token, "access", db)
         revoke_all_user_tokens(current_user.id, db)

@@ -9,7 +9,6 @@ from schemas import ReceiptResponse, ReceiptUpdate, ListResponse
 from utils import get_obj_or_404, paginate, get_db, get_query_params, require_scope, require_subscription, StorageService
 
 router = APIRouter(prefix="/projects/{project_id}/receipts", tags=["Receipts"])
-storage = StorageService()
 
 @router.post("/", response_model=ReceiptResponse)
 async def create_receipt(
@@ -47,6 +46,7 @@ async def create_receipt(
             detail="File too large. Maximum size is 10MB."
         )
     try:
+        storage = StorageService()
         file_path = storage.upload_receipt(project_id=project.id, file=io.BytesIO(file_content), filename=file.filename)
         receipt: Receipt = project.add_receipt(
             db=db,

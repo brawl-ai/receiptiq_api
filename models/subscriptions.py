@@ -160,7 +160,7 @@ class Payment(Model):
             paid_at=datetime.fromisoformat(data.get('paid_at').replace('Z', '+00:00')) if data.get('paid_at') else None,
             created_at=datetime.fromisoformat(data.get('created_at').replace('Z', '+00:00')) if data.get('created_at') else None,
             channel=PaymentChannel(data.get('channel')) if data.get('channel') else None,
-            currency=data.get('currency', 'NGN'),
+            currency=CurrencyType(data.get('currency', 'USD')),
             ip_address=data.get('ip_address'),
             payment_metadata=data.get('metadata'),
             log=data.get('log'),

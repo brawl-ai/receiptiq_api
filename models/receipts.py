@@ -16,8 +16,6 @@ from models import Model
 from .data import DataValue
 from .fields import Field
 
-storage = StorageService()
-
 class Receipt(Model):
     __tablename__ = "receipts"
     
@@ -64,6 +62,7 @@ class Receipt(Model):
     
     def localize(self):
         temp_local_path = f"temp/{self.file_path}"
+        storage = StorageService()
         storage.download_file(self.file_path, temp_local_path)
         return temp_local_path
     

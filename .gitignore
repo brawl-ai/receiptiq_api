@@ -6,3 +6,5 @@ env
 */*/__pycache__/
 notes
 test.py
+.coverage
+__pycache__

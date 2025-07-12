@@ -5,13 +5,13 @@ from fastapi import Form
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, constr
 
 class LoginRequest(BaseModel):
-    username: EmailStr = Field(..., example="user@example.com", description="User's email address")
-    password: str = Field(..., example="supersecret", description="User's password")
+    username: EmailStr = Field(..., json_schema_extra="user@example.com", description="User's email address")
+    password: str = Field(..., json_schema_extra="supersecret", description="User's password")
     scope: Optional[str] = "read:profile"
     grant_type: str
 
 class ForgotPasswordRequest(BaseModel):
-    email: EmailStr = Field(..., example="user@example.com", description="User's email address")
+    email: EmailStr = Field(..., json_schema_extra="user@example.com", description="User's email address")
 
 class ForgotPasswordResponse(BaseModel):
     message: str
@@ -26,7 +26,7 @@ class ResetPasswordResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Form(...)
-    grant_type: str = Form(..., regex="^refresh_token$")
+    grant_type: str = Form(..., pattern="^refresh_token$")
 
 class RefreshTokenResponse(BaseModel):
     access_token: str
@@ -36,7 +36,7 @@ class RefreshTokenResponse(BaseModel):
 
 class RevokeTokenRequest(BaseModel):
     token: str = Form(...)
-    token_type_hint: Optional[str] = Form(None, regex="^(access_token|refresh_token)$")
+    token_type_hint: Optional[str] = Form(None, pattern="^(access_token|refresh_token)$")
 
 class LogoutRequest(BaseModel):
     token: str = Form(...)

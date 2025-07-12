@@ -7,11 +7,11 @@ from models import User
 from utils import StorageService
 
 router = APIRouter(tags=["Files"])
-storage = StorageService()
 
 @router.get("/{file_path:path}", status_code=200)
 async def download(file_path: str, auth: Tuple[User, str] = Depends(get_current_active_verified_user)) -> FileResponse:
     try:
+        storage = StorageService()
         download_url = storage.get_url(file_path)
         return RedirectResponse(url=download_url)
     except Exception as e:

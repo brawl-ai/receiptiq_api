@@ -207,7 +207,7 @@ async def get_subscriptions(
     )
 
 @router.get("/{subscription_id}/update_subscription_link")
-async def manage_subscriptions(
+async def get_manage_subscriptions_link(
     subscription_id: UUID,
     auth: Tuple[User, str] = Depends(get_current_active_verified_user),
     db: Session = Depends(get_db)

@@ -20,3 +20,8 @@ slowapi==0.1.9
 resend==2.10.0
 alembic==1.16.1
 boto3==1.39.3
+pytest==8.4.1
+pytest-asyncio==1.0.0
+coverage==7.9.2
+moto[s3]==5.1.8
+pytest-postgresql==7.0.2

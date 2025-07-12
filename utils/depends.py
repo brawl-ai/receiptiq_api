@@ -9,8 +9,9 @@ import jwt
 from sqlalchemy.orm import Session, sessionmaker
 from models.subscriptions import Subscription
 from models.auth import RevokedToken,User
-from config import settings, logger
+from config import get_settings, logger
 
+settings = get_settings()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
 engine = create_engine(
@@ -93,6 +94,7 @@ async def get_app(authorization: Annotated[str, Header(alias="Authorization")]) 
         encoded_credentials = authorization[6:]  # Remove "Basic "
         decoded_credentials = base64.b64decode(encoded_credentials).decode('utf-8')
         client_id, client_secret = decoded_credentials.split(':', 1)
+        settings = get_settings()
         if client_id == settings.client_id and client_secret == settings.client_secret:
             return (client_id, client_secret)
         else:
