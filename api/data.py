@@ -16,7 +16,6 @@ from models.receipts import Receipt
 from schemas import FieldResponse
 
 router = APIRouter(prefix="/projects/{project_id}/data", tags=["Data"])
-storage = StorageService()
 
 @router.get("", response_model=List[Dict])
 async def get_project_data(
@@ -105,8 +104,30 @@ async def update_project_data(
     data_value.value = data_value_update.value
     db.add(data_value)
     db.commit()
-    db.refresh()
+    db.refresh(data_value)
     return data_value
+
+def save_csv(project: Project):
+    path: str = f"temp/{project.name}_{project.id}.csv"
+    data = []
+    for receipt in project.receipts:
+        row = {
+            "receipt_id": str(receipt.id),
+            "receipt_path": receipt.file_path
+        }
+        for dv in receipt.data_values:
+            row[dv.fully_name] = dv.value
+        data.append(row)
+    with open(path,mode="w", newline="") as output:
+        writer = csv.writer(output, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
+        field_names = [k for k,v in data[0].items()]
+        writer.writerow(field_names)
+        for r in data:
+            writer.writerow([v for k,v in r.items()])
+    with open(path,"rb") as f:
+        file = io.BytesIO(f.read())
+    os.remove(path)
+    return file
 
 @router.get("/csv")
 async def export_project_data_csv(
@@ -129,26 +150,9 @@ async def export_project_data_csv(
             detail="Not authorized to export data from this project"
         )
     try:
-        path: str = f"temp/{project.name}_{project.id}.csv"
-        data = []
-        for receipt in project.receipts:
-            row = {
-                "receipt_id": str(receipt.id),
-                "receipt_path": receipt.file_path
-            }
-            for dv in receipt.data_values:
-                row[dv.fully_name] = dv.value
-            data.append(row)
-        with open(path,mode="w", newline="") as output:
-            writer = csv.writer(output, delimiter=',',quotechar='|', quoting=csv.QUOTE_MINIMAL)
-            field_names = [k for k,v in data[0].items()]
-            writer.writerow(field_names)
-            for r in data:
-                writer.writerow([v for k,v in r.items()])
-        with open(path,"rb") as f:
-            file = io.BytesIO(f.read())
+        file = save_csv(project)
+        storage = StorageService()
         export_storage_path = storage.upload_export(project_id=project.id,file=file,filename="data_export.csv")
-        os.remove(path)
         return {
             "url": f"{request.base_url}files/{export_storage_path}"
         }
