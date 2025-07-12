@@ -24,7 +24,6 @@ def create_user(db, test_settings):
     )
     user.set_password(TEST_USER["password"])
     for permission in db.execute(select(Permission)).scalars().all():
-        # print(permission.codename)
         user.scopes.append(permission)
     user.is_active = True
     user.is_verified = True

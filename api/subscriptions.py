@@ -74,8 +74,6 @@ async def complete_payment(request: Request, db: Session = Depends(get_db)):
     body = await request.body()
     payload = json.loads(body.decode("utf-8"))
     logger.debug(f"/payments/webhook decoded payload: {payload}")
-    print(f"/payments/webhook decoded payload: {payload}")
-
     event = payload.get("event")
     data = payload.get("data")
 

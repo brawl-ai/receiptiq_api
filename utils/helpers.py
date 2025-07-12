@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import re
 import secrets
+import subprocess
 from typing import List, Tuple, Optional
 from fastapi import HTTPException, Request, UploadFile
 from pathlib import Path
@@ -261,3 +262,17 @@ async def verify_paystack_signature(request: Request):
         logger.warning(f"Invalid signature")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+def get_git_commit_hash():
+    try:
+        result = subprocess.run(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            capture_output=True,
+            text=True,
+            cwd='.'
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+        else:
+            return "alpha"
+    except Exception:
+        return "alpha"

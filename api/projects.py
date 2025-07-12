@@ -171,7 +171,6 @@ async def process(
         api_key=settings.openai_api_key
     )
     schema = prepare_schema([FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent])
-    print(schema)
     for receipt in project.receipts:
         if receipt.status in ["pending", "completed","failed"]:
             receipt.process(db=db,extractor=extractor, schema_dict=schema)
