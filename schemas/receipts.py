@@ -10,7 +10,7 @@ class ReceiptCreate(BaseModel):
     mime_type: str = Field(..., min_length=1, max_length=100)
 
 class ReceiptUpdate(BaseModel):
-    status: Optional[str] = Field(None, choices=['pending', 'processing', 'completed', 'failed'])
+    status: Optional[str] = Field(None, json_schema_extra=['pending', 'processing', 'completed', 'failed'])
     error_message: Optional[str] = Field(None, max_length=500)
 
 class ReceiptField(BaseModel):
