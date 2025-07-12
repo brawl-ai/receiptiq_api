@@ -1,0 +1,41 @@
+# See https://fly.io/docs/app-guides/continuous-deployment-with-github-actions/
+
+name: Test and Deploy on Fly
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test app
+    runs-on: ubuntu-latest
+    strategy:
+            max-parallel: 4
+            matrix:
+                python-version: [3.10.12]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+            python-version: ${{ matrix.python-version }}
+      - name: Install Dependencies
+        run: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+      - name: Run pytests
+        run: |
+            coverage run -m pytest -p no:cacheprovider
+            coverage report -m
+        
+  deploy:
+    name: Deploy app
+    runs-on: ubuntu-latest
+    concurrency: deploy-group    # optional: ensure only one action runs at a time
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: flyctl deploy --remote-only
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
