@@ -76,7 +76,7 @@ async def test_projects(client, db, test_settings):
     response = client.post(
                         "/api/v1/projects", 
                         json=payload,
-                        headers={"Authorization": f"Bearer {access_token}"}
+                        cookies={"access_token":access_token}
                     )
     assert response.status_code == 200
     data = response.json()
@@ -84,16 +84,16 @@ async def test_projects(client, db, test_settings):
     project = Project(name="Alpha", description="First", owner_id=user.id)
     db.add(project)
     db.commit()
-    response = client.get("/api/v1/projects", headers={"Authorization": f"Bearer {access_token}"})
+    response = client.get("/api/v1/projects", cookies={"access_token":access_token})
     assert response.status_code == 200
     assert any(p["name"] == "Alpha" for p in response.json()["data"])
-    response = client.get(f"/api/v1/projects/{project.id}", headers={"Authorization": f"Bearer {access_token}"})
+    response = client.get(f"/api/v1/projects/{project.id}", cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["name"] == project.name
-    response = client.put(f"/api/v1/projects/{project.id}", json={"name": "Alpha1"}, headers={"Authorization": f"Bearer {access_token}"})
+    response = client.put(f"/api/v1/projects/{project.id}", json={"name": "Alpha1"}, cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["name"] == "Alpha1"
-    response = client.delete(f"/api/v1/projects/{project.id}", headers={"Authorization": f"Bearer {access_token}"})
+    response = client.delete(f"/api/v1/projects/{project.id}", cookies={"access_token":access_token})
     assert response.status_code == 204
 
 def add_project(db:Session, user: User):
@@ -108,13 +108,12 @@ async def test_fields(client, db, test_settings):
     user, access_token = create_user(db,test_settings)
     add_subscription(db,user)
     project = add_project(db, user)
-    headers = {"Authorization": f"Bearer {access_token}"}
     payload = {
         "name": "total_amount",
         "type": "number",
         "description": "Total amount paid"
     }
-    response = client.post(f"/api/v1/projects/{project.id}/fields/", json=payload, headers=headers)
+    response = client.post(f"/api/v1/projects/{project.id}/fields/", json=payload, cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["name"] == "total_amount"
     assert response.json()["type"] == "number"
@@ -127,25 +126,25 @@ async def test_fields(client, db, test_settings):
         "type": "string",
         "description": "Author Name"
     }
-    response = client.post(f"/api/v1/projects/{project.id}/fields/{parent.id}/add_child", json=payload, headers=headers)
+    response = client.post(f"/api/v1/projects/{project.id}/fields/{parent.id}/add_child", json=payload, cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["parent"]["id"] == str(parent.id)
 
-    response = client.get(f"/api/v1/projects/{project.id}/fields/", headers=headers)
+    response = client.get(f"/api/v1/projects/{project.id}/fields/", cookies={"access_token":access_token})
     assert response.status_code == 200
     results = response.json()["data"]
     assert any(f["name"] == "author" for f in results)
 
-    response = client.get(f"/api/v1/projects/{project.id}/fields/{parent.id}", headers=headers)
+    response = client.get(f"/api/v1/projects/{project.id}/fields/{parent.id}", cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["name"] == "metadata"
 
     payload = {"description": "Updated description for metadata"}
-    response = client.put(f"/api/v1/projects/{project.id}/fields/{parent.id}", json=payload,  headers=headers)
+    response = client.put(f"/api/v1/projects/{project.id}/fields/{parent.id}", json=payload,  cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["description"] == "Updated description for metadata"
 
-    response = client.delete(f"/api/v1/projects/{project.id}/fields/{parent.id}", headers=headers)
+    response = client.delete(f"/api/v1/projects/{project.id}/fields/{parent.id}", cookies={"access_token":access_token})
     assert response.status_code == 204
 
 @pytest.mark.asyncio
@@ -160,7 +159,7 @@ async def test_receipts(client, db, test_settings):
         response = client.post(
             f"/api/v1/projects/{project.id}/receipts/",
             files={"file": ("receipt.pdf", content, "application/pdf")},
-            headers=headers
+            cookies={"access_token":access_token}
         )
         receipt_id = response.json()["id"]
         assert response.status_code == 200
@@ -172,24 +171,24 @@ async def test_receipts(client, db, test_settings):
         response = client.post(
             f"/api/v1/projects/{project.id}/receipts/",
             files={"file": ("receipt.exe", content, "application/x-msdownload")},
-            headers=headers
+            cookies={"access_token":access_token}
         )
         assert response.status_code == 400
         assert "Invalid file type" in response.text
 
-        response = client.get(f"/api/v1/projects/{project.id}/receipts/", headers=headers)
+        response = client.get(f"/api/v1/projects/{project.id}/receipts/", cookies={"access_token":access_token})
         assert response.status_code == 200
         results = response.json()["data"]
         assert any(r["file_name"] == "receipt.pdf" for r in results)
 
-        response = client.get(f"/api/v1/projects/{project.id}/receipts/{receipt_id}", headers=headers)
+        response = client.get(f"/api/v1/projects/{project.id}/receipts/{receipt_id}", cookies={"access_token":access_token})
         assert response.status_code == 200
         assert response.json()["file_name"] == "receipt.pdf"
 
         response = client.put(
             f"/api/v1/projects/{project.id}/receipts/{receipt_id}/",
             json={"status": "completed"},
-            headers=headers
+            cookies={"access_token":access_token}
         )
         assert response.status_code == 200
         assert response.json()["status"] == "completed"
@@ -197,7 +196,7 @@ async def test_receipts(client, db, test_settings):
         response = client.put(
             f"/api/v1/projects/{project.id}/receipts/{receipt_id}/",
             json={"status": "destroyed"},
-            headers=headers
+            cookies={"access_token":access_token}
         )
         assert response.status_code == 400
         assert "Invalid status" in response.text
@@ -244,23 +243,23 @@ async def test_process_project(mock_extract_from_document,mock_delocalize,mock_l
     
     headers = {"Authorization": f"Bearer {access_token}"}
     with mock_aws():
-        response = client.post(f"/api/v1/projects/{project.id}/process", headers=headers)
+        response = client.post(f"/api/v1/projects/{project.id}/process", cookies={"access_token":access_token})
         data_value_id = response.json()["data"][0]["data_values"][0]["id"]
         assert response.status_code == 200
         # Data endpoints
-        response = client.get(f"/api/v1/projects/{project.id}/data", headers=headers)
+        response = client.get(f"/api/v1/projects/{project.id}/data", cookies={"access_token":access_token})
         assert response.status_code == 200
-        response = client.put(f"/api/v1/projects/{project.id}/data/{data_value_id}", headers=headers, json={"value": "a"})
+        response = client.put(f"/api/v1/projects/{project.id}/data/{data_value_id}", cookies={"access_token":access_token}, json={"value": "a"})
         assert response.status_code == 200
-        response = client.get(f"/api/v1/projects/{project.id}/data/csv", headers=headers)
+        response = client.get(f"/api/v1/projects/{project.id}/data/csv", cookies={"access_token":access_token})
         assert response.status_code == 200
         # Files (Download) endpoint
         assert len(response.json()["url"]) > 0
         export_url = response.json()["url"].replace("http://testserver","")
-        response = client.request("GET", export_url, headers=headers, follow_redirects=False)
+        response = client.request("GET", export_url, cookies={"access_token":access_token}, follow_redirects=False)
         assert response.status_code == 307
         receipt_url = project.receipts[0].file_path
-        response = client.request("GET", f"/files/{receipt_url}", headers=headers, follow_redirects=False)
+        response = client.request("GET", f"/files/{receipt_url}", cookies={"access_token":access_token}, follow_redirects=False)
         assert response.status_code == 307
 
     mock_save_csv.assert_called_once()

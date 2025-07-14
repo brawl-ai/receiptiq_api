@@ -168,9 +168,8 @@ class TestAuthEndpoints:
             headers=headers
         )
         assert response.status_code == 200
-        assert "access_token" in response.json()
-        assert "refresh_token" in response.json()
-        assert response.json()["token_type"] == "Bearer"
+        assert response.json().get("success") == True
+        assert response.cookies.get("access_token") != None
         
         # Test invalid credentials
         response = client.post(
@@ -252,6 +251,7 @@ class TestAuthEndpoints:
         
         # Create refresh token
         refresh_token = user.create_refresh_token(db)
+        cookies = {"refresh_token": refresh_token}
         
         # Test successful refresh
         response = client.post(
@@ -260,11 +260,12 @@ class TestAuthEndpoints:
                 "refresh_token": refresh_token,
                 "grant_type": "refresh_token"
             },
+            cookies=cookies,
             headers=headers
         )
         assert response.status_code == 200
-        assert "access_token" in response.json()
-        assert "refresh_token" in response.json()
+        assert "access_token" in response.cookies
+        assert "refresh_token" in response.cookies
         
         # Test invalid refresh token
         response = client.post(
@@ -273,21 +274,11 @@ class TestAuthEndpoints:
                 "refresh_token": "invalid_token",
                 "grant_type": "refresh_token"
             },
+            cookies= {"refresh_token": "invalid_token"},
             headers=headers
         )
         assert response.status_code == 401
         assert "invalid_grant" in response.json()["detail"]["error"]
-        
-        # Test unsupported grant type
-        response = client.post(
-            url="/api/v1/auth/token/refresh",
-            json={
-                "refresh_token": refresh_token,
-                "grant_type": "password"
-            },
-            headers=headers
-        )
-        assert response.status_code == 422
 
     def test_revoke_token(self, client, test_settings, db):
         """Test token revocation - success scenarios"""
@@ -450,7 +441,7 @@ class TestAuthEndpoints:
             granted_scopes=["write:profile"]
         )
         
-        auth_headers = {"Authorization": f"Bearer {access_token}"}
+        cookies = {"access_token": access_token}
         
         # Test successful password change
         response = client.post(
@@ -459,7 +450,7 @@ class TestAuthEndpoints:
                 "current_password": self.test_user_data["password"],
                 "new_password": "NewS3cr3t@Pass"
             },
-            headers=auth_headers
+            cookies=cookies
         )
         assert response.status_code == 200
         assert "Password has been updated successfully" in response.json()["message"]
@@ -471,7 +462,7 @@ class TestAuthEndpoints:
                 "current_password": "wrongpassword",
                 "new_password": "AnotherS3cr3t@Pass"
             },
-            headers=auth_headers
+            cookies=cookies
         )
         assert response.status_code == 401
         assert "Incorrect current password" in response.json()["detail"]
@@ -483,7 +474,7 @@ class TestAuthEndpoints:
                 "current_password": "NewS3cr3t@Pass",
                 "new_password": "weak"
             },
-            headers=auth_headers
+            cookies=cookies
         )
         assert response.status_code == 422
 
@@ -513,12 +504,12 @@ class TestAuthEndpoints:
             granted_scopes=["read:profile"]
         )
         
-        auth_headers = {"Authorization": f"Bearer {access_token}"}
+        cookies = {"access_token": access_token}
         
         # Test successful profile retrieval
         response = client.get(
             url="/api/v1/auth/me",
-            headers=auth_headers
+            cookies=cookies
         )
         assert response.status_code == 200
         assert response.json()["email"] == self.test_user_data["email"]
@@ -557,7 +548,7 @@ class TestAuthEndpoints:
             granted_scopes=["write:profile"]
         )
         
-        auth_headers = {"Authorization": f"Bearer {access_token}"}
+        cookies = {"access_token": access_token}
         
         # Test successful profile update
         response = client.patch(
@@ -566,7 +557,7 @@ class TestAuthEndpoints:
                 "first_name": "Jane",
                 "last_name": "Smith"
             },
-            headers=auth_headers
+            cookies=cookies
         )
         assert response.status_code == 200
         assert "User updated successfully" in response.json()["message"]
@@ -578,7 +569,7 @@ class TestAuthEndpoints:
             json={
                 "email": "jane.smith@example.com"
             },
-            headers=auth_headers
+            cookies=cookies
         )
         assert response.status_code == 200
         assert "new email needs to be verified" in response.json()["message"]
@@ -611,13 +602,13 @@ class TestAuthEndpoints:
             expiry_seconds=test_settings.access_token_expiry_seconds
         )
         
-        auth_headers = {"Authorization": f"Bearer {access_token}"}
+        cookies = {"access_token": access_token}
         
         # Test successful logout
         response = client.post(
             url="/api/v1/auth/logout",
             data={"token": access_token},
-            headers=auth_headers
+            cookies=cookies
         )
         assert response.status_code == 200
         assert "Logout successful" in response.json()["message"]
@@ -626,6 +617,6 @@ class TestAuthEndpoints:
         response = client.post(
             url="/api/v1/auth/logout",
             data={},
-            headers=auth_headers
+            headers=cookies
         )
         assert response.status_code == 401

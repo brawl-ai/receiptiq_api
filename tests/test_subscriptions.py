@@ -65,7 +65,7 @@ async def test_start_payment_success(mock_paystack, client, db, test_settings):
     response = client.post(
                         url="/api/v1/subscriptions/payments/start", 
                         json=payload, 
-                        headers={"Authorization": f"Bearer {access_token}"}
+                        cookies={"access_token":access_token}
                     )
     assert response.status_code == 200
     assert "payment_url" in response.json()
@@ -99,7 +99,7 @@ async def test_webhook_subscription_create(mock_verify, client, db, test_setting
     response = client.post(
         "/api/v1/subscriptions/payments/webhook",
         json=payload,
-        headers={"x-paystack-signature": "dummy", "Authorization": f"Bearer {access_token}"},
+        headers={"x-paystack-signature": "dummy"}
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Subscription Event Consumed Successfully"
@@ -140,7 +140,7 @@ async def test_webhook_charge_success_creates_payment(mock_verify, client, db, t
     response = client.post(
         "/api/v1/subscriptions/payments/webhook",
         json=payload,
-        headers={"x-paystack-signature": "dummy", "Authorization": f"Bearer {access_token}"},
+        headers={"x-paystack-signature": "dummy"},
     )
     assert response.status_code == 200
     assert response.json()["message"] == "Subscription Event Consumed Successfully"
@@ -166,6 +166,6 @@ async def test_get_subscription_update_link(mock_link, client, db, test_settings
     db.refresh(sub)
     access_token = user.create_jwt_token(test_settings.secret_key,algorithm=test_settings.algorithm,expiry_seconds=test_settings.access_token_expiry_seconds)
     mock_link.return_value = {"link": "https://paystack.com/manage/sub_test"}
-    response = client.get(f"/api/v1/subscriptions/{sub.id}/update_subscription_link", headers={"Authorization": f"Bearer {access_token}"})
+    response = client.get(f"/api/v1/subscriptions/{sub.id}/update_subscription_link", cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["link"].startswith("https://paystack.com")
