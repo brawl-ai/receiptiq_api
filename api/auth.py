@@ -2,6 +2,7 @@ import hashlib
 from typing import Optional, Tuple
 import datetime
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import JSONResponse
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -297,13 +298,28 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             details={"email": user.email, "scopes": granted_scopes},
             db=db
         )
-        return {
-            "access_token": access_token,
-            "token_type": "Bearer",
-            "refresh_token": refresh_token,
-            "expires_in": settings.access_token_expiry_seconds,
-            "scope": " ".join(granted_scopes)
-        }
+        response = JSONResponse(content={
+            "success": True
+        })
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=settings.access_token_expiry_seconds
+        )
+        response.set_cookie(
+            key="refresh_token",
+            value=refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            max_age=settings.refresh_token_expiry_seconds,  # whatever you define
+            path="/api/v1/auth/token/refresh"
+        )
+        return response
+
     except Exception as e:
         if user:
             if user.failed_login_attempts >= 10:
@@ -335,7 +351,7 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
         raise
 
 @router.post("/token/refresh", response_model=RefreshTokenResponse)
-async def refresh_token(refresh_token_request: RefreshTokenRequest,db: Session = Depends(get_db), _ = Depends(get_app)):
+async def refresh_token(request: Request,db: Session = Depends(get_db), _ = Depends(get_app)):
     """
     OAuth2 Token Refresh Endpoint
     
@@ -350,17 +366,12 @@ async def refresh_token(refresh_token_request: RefreshTokenRequest,db: Session =
     - Client credentials via `Authorization: Basic <base64(client_id:client_secret)>`
     
     **Returns:**
-    - **access_token**: New JWT access token
-    - **token_type**: "Bearer"
-    - **refresh_token**: New refresh token (optional)
-    - **expires_in**: Access token expiration in seconds
+    - **success**: True/False
     """
-    if refresh_token_request.grant_type != "refresh_token":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"error": "unsupported_grant_type", "error_description": "Only 'refresh_token' grant type is supported"}
-        )
-    user: User = User.verify_refresh_token(refresh_token_request.refresh_token, db)
+    _refresh_token = request.cookies.get("refresh_token")
+    if not _refresh_token:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+    user: User = User.verify_refresh_token(_refresh_token, db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -377,13 +388,26 @@ async def refresh_token(refresh_token_request: RefreshTokenRequest,db: Session =
         expiry_seconds=settings.access_token_expiry_seconds
     )
     new_refresh_token = user.create_refresh_token(db)
-    revoke_token(refresh_token_request.refresh_token, "refresh", db)
-    return {
-        "access_token": access_token,
-        "token_type": "Bearer",
-        "refresh_token": new_refresh_token,
-        "expires_in": settings.access_token_expiry_seconds
-    }
+    revoke_token(_refresh_token, "refresh", db)
+    response = JSONResponse(content={"success": True})
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.access_token_expiry_seconds
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=new_refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.refresh_token_expiry_seconds,
+        path="/api/v1/auth/token/refresh"
+    )
+    return response
 
 @router.post("/token/revoke")
 async def revoke_token_endpoint(revoke_token_request: RevokeTokenRequest,db: Session = Depends(get_db),_ = Depends(get_app)):
@@ -609,7 +633,10 @@ async def logout(
             db=db
         )
         logger.info(f"User {current_user.id} logged out successfully")
-        return {"message": "Logout successful"}
+        response = JSONResponse(content={"message": "Logout successful"})
+        response.delete_cookie("access_token")
+        response.delete_cookie("refresh_token", path="/api/v1/auth/token/refresh")
+        return response
     except Exception as e:
         logger.error(f"Error during logout for user {current_user.id}: {str(e)}")
         raise HTTPException(
