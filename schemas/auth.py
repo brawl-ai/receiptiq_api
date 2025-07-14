@@ -88,11 +88,7 @@ class VerifyCodeRequest(BaseModel):
     code: str = Field(..., min_length=5, max_length=5)
 
 class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "Bearer"
-    expires_in: Optional[int] = None
-    refresh_token: Optional[str] = None
-    scope: Optional[str] = None
+    success: bool = False
 
 class TokenData(BaseModel):
     email: str
