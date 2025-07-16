@@ -8,7 +8,7 @@ import uuid
 from fastapi import HTTPException
 import jwt
 from passlib.context import CryptContext
-from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Table
+from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Table, select
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from models import Model
@@ -51,6 +51,7 @@ class User(Model):
     otp_expiry_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, default=datetime.datetime.now)
     is_active: Mapped[bool] = mapped_column(Boolean, default=False)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    accepted_terms: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     access_token: Mapped[Optional[str]] = mapped_column(String(500))
     created_at: Mapped[datetime.datetime] = mapped_column(DateTime, default=datetime.datetime.now)
     updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, onupdate=datetime.datetime.now)
@@ -178,11 +179,11 @@ class User(Model):
     def verify_refresh_token(token: str, db: Session):
         """Verify refresh token and return user"""
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-        refresh_token = db.query(RefreshToken).filter(
+        refresh_token = db.execute(select(RefreshToken).where(
             RefreshToken.token_hash == token_hash,
             RefreshToken.revoked == False,
             RefreshToken.expires_at > datetime.datetime.now(tz=datetime.timezone.utc)
-        ).first()
+        )).scalar_one_or_none()
         if not refresh_token:
             return None
         return refresh_token.user
@@ -212,6 +213,9 @@ class RefreshToken(Model):
     updated_at: Mapped[Optional[datetime.datetime]] = mapped_column(DateTime, onupdate=datetime.datetime.now)
 
     user: Mapped[User] = relationship("User", back_populates="refresh_tokens")
+
+    def __str__(self):
+        return f"{self.user.first_name} - {self.token_hash}"
 
 class RevokedToken(Model):
     __tablename__ = "revoked_tokens"
