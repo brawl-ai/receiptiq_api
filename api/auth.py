@@ -98,7 +98,6 @@ async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = 
         **Next Step:** Use `/otp/check` endpoint with OTP to activate account
     """
     try:
-        default_permissions = ["read:profile"]
         is_valid, errors = PasswordValidator.validate_password(user_in.password)
         if not is_valid:
             raise HTTPException(
@@ -114,15 +113,10 @@ async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = 
         user = User(
             first_name=user_in.first_name,
             last_name=user_in.last_name,
-            email=user_in.email
+            email=user_in.email,
+            accepted_terms=user_in.accepted_terms
         )
         user.set_password(user_in.password)
-        for perm_code in default_permissions:
-            perm = db.execute(select(Permission).where(Permission.codename == perm_code)).scalar_one_or_none()
-            if perm:
-                user.scopes.append(perm)
-            else:
-                logger.warning(f"Permission {perm_code} does not exist in the database")
         db.add(user)
         db.commit()
         db.refresh(user)
@@ -274,12 +268,14 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
         requested_scopes = login_request.scope.split() if login_request.scope else ["read:profile"]
         user_scopes = [scope.codename for scope in user.scopes]
         granted_scopes = [scope for scope in requested_scopes if scope in user_scopes]
+        access_token_age_seconds = settings.access_token_expiry_seconds if login_request.is_remember_me else 3600 # token is valid for 1hr if you don't ask to be remembered
         access_token = user.create_jwt_token(
             secret=settings.secret_key,
             algorithm=settings.algorithm,
-            expiry_seconds=settings.access_token_expiry_seconds,
+            expiry_seconds=access_token_age_seconds,
             granted_scopes=granted_scopes
         )
+        refresh_token_age_seconds = 60*60*24*30 if login_request.is_remember_me else 3600 # token is valid for 1hr if you don't ask to be remembered
         refresh_token = user.create_refresh_token(db)
         user.failed_login_attempts = 0
         user.locked_until = None
@@ -307,7 +303,7 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             httponly=True,
             secure=True,
             samesite="lax",
-            max_age=settings.access_token_expiry_seconds
+            max_age=access_token_age_seconds
         )
         response.set_cookie(
             key="refresh_token",
@@ -315,8 +311,8 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             httponly=True,
             secure=True,
             samesite="strict",
-            max_age=settings.refresh_token_expiry_seconds,  # whatever you define
-            path="/api/v1/auth/token/refresh"
+            max_age=refresh_token_age_seconds,
+            path="/"
         )
         return response
 
@@ -405,7 +401,7 @@ async def refresh_token(request: Request,db: Session = Depends(get_db), _ = Depe
         secure=True,
         samesite="strict",
         max_age=settings.refresh_token_expiry_seconds,
-        path="/api/v1/auth/token/refresh"
+        path="/"
     )
     return response
 
@@ -424,6 +420,11 @@ async def revoke_token_endpoint(revoke_token_request: RevokeTokenRequest,db: Ses
     - Client credentials via `Authorization: Basic <base64(client_id:client_secret)>`
     
     **Note:** Always returns 200 OK regardless of token validity for security
+
+    **Useful for** OAuth2 spec so other apps can revoke a user’s token, not just the user themselves.:
+    - Mobile apps
+    - Integrations
+    - Admin or security systems
     """
     try:
         if revoke_token_request.token_type_hint == "refresh_token":
@@ -601,7 +602,6 @@ async def update_user_profile(update_payload: UserUpdate,current_user: User = De
 @router.post("/logout")
 async def logout(
     request: Request,
-    token: str = Form(...),
     auth: Tuple[User, str] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -622,6 +622,7 @@ async def logout(
     3. User must re-authenticate to get new tokens
     """
     current_user, scope = auth
+    token = request.cookies.get("access_token")
     try:
         revoke_token(token, "access", db)
         revoke_all_user_tokens(current_user.id, db)
@@ -635,7 +636,7 @@ async def logout(
         logger.info(f"User {current_user.id} logged out successfully")
         response = JSONResponse(content={"message": "Logout successful"})
         response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token", path="/api/v1/auth/token/refresh")
+        response.delete_cookie("refresh_token", path="/")
         return response
     except Exception as e:
         logger.error(f"Error during logout for user {current_user.id}: {str(e)}")

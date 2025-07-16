@@ -163,7 +163,8 @@ class TestAuthEndpoints:
             data={
                 "username": self.test_user_data["email"],
                 "password": self.test_user_data["password"],
-                "grant_type": "password"
+                "grant_type": "password",
+                "remember_me": True
             },
             headers=headers
         )
@@ -177,7 +178,8 @@ class TestAuthEndpoints:
             data={
                 "username": self.test_user_data["email"],
                 "password": "wrongpassword",
-                "grant_type": "password"
+                "grant_type": "password",
+                "remember_me": True
             },
             headers=headers
         )
@@ -193,7 +195,8 @@ class TestAuthEndpoints:
             data={
                 "username": self.test_user_data["email"],
                 "password": self.test_user_data["password"],
-                "grant_type": "password"
+                "grant_type": "password",
+                "remember_me": True
             },
             headers=headers
         )
@@ -210,7 +213,8 @@ class TestAuthEndpoints:
             data={
                 "username": self.test_user_data["email"],
                 "password": self.test_user_data["password"],
-                "grant_type": "password"
+                "grant_type": "password",
+                "remember_me": True
             },
             headers=headers
         )
@@ -226,7 +230,8 @@ class TestAuthEndpoints:
             data={
                 "username": self.test_user_data["email"],
                 "password": self.test_user_data["password"],
-                "grant_type": "authorization_code"
+                "grant_type": "authorization_code",
+                "remember_me": True
             },
             headers=headers
         )

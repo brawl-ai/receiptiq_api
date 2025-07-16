@@ -26,13 +26,14 @@ jobs:
             pip install -r requirements.txt
       - name: Run pytests
         run: |
-            coverage run -m pytest -p no:cacheprovider
+            coverage run -m pytest -W ignore::DeprecationWarning -p no:cacheprovider
             coverage report -m
         
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest
-    concurrency: deploy-group    # optional: ensure only one action runs at a time
+    needs: test
+    concurrency: deploy-group
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master

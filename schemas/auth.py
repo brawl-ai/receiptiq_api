@@ -7,8 +7,13 @@ from pydantic import BaseModel, EmailStr, Field, ConfigDict, constr
 class LoginRequest(BaseModel):
     username: EmailStr = Field(..., json_schema_extra="user@example.com", description="User's email address")
     password: str = Field(..., json_schema_extra="supersecret", description="User's password")
+    remember_me: str = Field(..., json_schema_extra="true", description="remember_me")
     scope: Optional[str] = "read:profile"
     grant_type: str
+
+    @property
+    def is_remember_me(self):
+        return self.remember_me.lower() in ["true","on","1"]
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr = Field(..., json_schema_extra="user@example.com", description="User's email address")
@@ -54,6 +59,7 @@ class UserBase(BaseModel):
     email: EmailStr
     first_name: str
     last_name: str
+    accepted_terms: Optional[bool] = False
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=100)
