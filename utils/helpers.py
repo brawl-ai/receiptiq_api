@@ -77,7 +77,7 @@ async def send_password_reset_email(email: str, reset_token: str):
     """
     Send verification email using Mailtrap
     """
-    reset_link = f"{settings.frontend_url}/reset-password?token={reset_token}"
+    reset_link = f"{settings.frontend_url}/password/reset?token={reset_token}&email={email}"
     try:
         subject = "ReceiptIQ - Password Reset Request"
         message = f"""
@@ -86,8 +86,8 @@ async def send_password_reset_email(email: str, reset_token: str):
         You requested a password reset for your account.
     
         Click the link below to reset your password:
-        
-        {reset_link}
+
+        <a href='{reset_link}'>Reset Password</a>
         
         This link will expire in {settings.password_reset_token_expiry_seconds // 60} minutes.
 
