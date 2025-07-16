@@ -8,11 +8,12 @@ import uuid
 from fastapi import HTTPException
 import jwt
 from passlib.context import CryptContext
-from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Table, select
+from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Table, func, select, true
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from models import Model
 from config import logger, settings
+from models.subscriptions import Subscription
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -187,6 +188,10 @@ class User(Model):
         if not refresh_token:
             return None
         return refresh_token.user
+    
+    @property
+    def is_subscribed(self):
+        return any([sub.end_at>func.now() for sub in self.subscriptions])
 
     def __str__(self):
         return f"{self.first_name} - {self.email}"

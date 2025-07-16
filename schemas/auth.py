@@ -77,6 +77,7 @@ class UserResponse(UserBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     scopes: List[PermissionResponse] = []
+    is_subscribed: bool
 
     model_config = ConfigDict(from_attributes=True)
 
