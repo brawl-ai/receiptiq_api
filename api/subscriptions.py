@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from api import ListResponse
 from models import Payment, SubscriptionPlan, User, Subscription
 from schemas import StartPaymentPayload,SubscriptionPlanResponse, SubscriptionResponse
-from utils import get_paystack_subscription_link, paginate, get_obj_or_404, get_current_active_verified_user, get_db, get_query_params, verify_paystack_signature, initiate_paystack_payment
+from utils import get_paystack_subscription_link, paginate, get_obj_or_404, get_current_active_verified_user, get_db, get_query_params, verify_paystack_payment, verify_paystack_signature, initiate_paystack_payment
 from config import logger
 
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
@@ -203,6 +203,16 @@ async def get_subscriptions(
         schema=SubscriptionResponse,
         **params
     )
+
+@router.get("/payments/check/{reference}")
+async def check_payment(
+    reference: str,
+    auth: Tuple[User, str] = Depends(get_current_active_verified_user),
+    db: Session = Depends(get_db)
+):
+    user, scope = auth
+    payment_object: dict = await verify_paystack_payment(reference)
+    return payment_object
 
 @router.get("/{subscription_id}/update_subscription_link")
 async def get_manage_subscriptions_link(
