@@ -303,7 +303,9 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             httponly=True,
             secure=True,
             samesite="lax",
-            max_age=access_token_age_seconds
+            max_age=access_token_age_seconds,
+            path="/",
+            domain=".receiptiq.co" if settings.environment == "production" else None
         )
         response.set_cookie(
             key="refresh_token",
@@ -312,7 +314,8 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             secure=True,
             samesite="strict",
             max_age=refresh_token_age_seconds,
-            path="/"
+            path="/",
+            domain=".receiptiq.co" if settings.environment == "production" else None
         )
         return response
 
@@ -381,7 +384,8 @@ async def refresh_token(request: Request,db: Session = Depends(get_db), _ = Depe
     access_token = user.create_jwt_token(
         secret=settings.secret_key,
         algorithm=settings.algorithm,
-        expiry_seconds=settings.access_token_expiry_seconds
+        expiry_seconds=settings.access_token_expiry_seconds,
+        granted_scopes=[perm.codename for perm in user.scopes]
     )
     new_refresh_token = user.create_refresh_token(db)
     revoke_token(_refresh_token, "refresh", db)
@@ -392,7 +396,9 @@ async def refresh_token(request: Request,db: Session = Depends(get_db), _ = Depe
         httponly=True,
         secure=True,
         samesite="lax",
-        max_age=settings.access_token_expiry_seconds
+        max_age=settings.access_token_expiry_seconds,
+        path="/",
+        domain=".receiptiq.co" if settings.environment == "production" else None
     )
     response.set_cookie(
         key="refresh_token",
@@ -401,7 +407,8 @@ async def refresh_token(request: Request,db: Session = Depends(get_db), _ = Depe
         secure=True,
         samesite="strict",
         max_age=settings.refresh_token_expiry_seconds,
-        path="/"
+        path="/",
+        domain=".receiptiq.co" if settings.environment == "production" else None
     )
     return response
 
@@ -635,8 +642,22 @@ async def logout(
         )
         logger.info(f"User {current_user.id} logged out successfully")
         response = JSONResponse(content={"message": "Logout successful"})
-        response.delete_cookie("access_token")
-        response.delete_cookie("refresh_token", path="/")
+        response.delete_cookie(
+            key="access_token",
+            path="/",
+            domain=".receiptiq.co" if settings.environment == "production" else None,
+            secure=True,
+            httponly=True,
+            samesite="lax"
+        )
+        response.delete_cookie(
+            key="refresh_token",
+            path="/",
+            domain=".receiptiq.co" if settings.environment == "production" else None,
+            secure=True,
+            httponly=True,
+            samesite="strict"
+        )
         return response
     except Exception as e:
         logger.error(f"Error during logout for user {current_user.id}: {str(e)}")
