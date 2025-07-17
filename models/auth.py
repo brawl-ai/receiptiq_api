@@ -132,7 +132,7 @@ class User(Model):
         self.locked_until = datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=minutes)
         db.commit()
 
-    def create_jwt_token(self, secret: str, algorithm: str, expiry_seconds: int, granted_scopes: list[str]="read") -> str:
+    def create_jwt_token(self, secret: str, algorithm: str, expiry_seconds: int, granted_scopes: list[str]=["read"]) -> str:
         """
         Create a JWT token for the user, encoding the email, user_id and expiry time and return it
         """
@@ -191,7 +191,9 @@ class User(Model):
     
     @property
     def is_subscribed(self):
-        return any([sub.end_at>func.now() for sub in self.subscriptions])
+        """Check if user has any active subscriptions"""
+        now = datetime.datetime.now(datetime.timezone.utc)
+        return any([sub.end_at > now for sub in self.subscriptions])
 
     def __str__(self):
         return f"{self.first_name} - {self.email}"
