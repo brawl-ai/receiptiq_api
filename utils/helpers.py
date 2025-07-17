@@ -222,7 +222,7 @@ async def initiate_paystack_payment(email: str, amount: float, currency: str, pl
     )
     logger.debug(f"initiate_paystack_payment response {response.status_code} {response.json()}")
     if response.ok and response.json()["status"]:
-        return response.json()["data"]
+        return response.json()
     else:
         raise Exception(response.text)
     
@@ -242,6 +242,25 @@ async def get_paystack_subscription_link(subscription_code: str):
     logger.debug(f"get_paystack_subscription_link response {response.status_code} {response.json()}")
     if response.ok and response.json()["status"]:
         return response.json()["data"]
+    else:
+        raise Exception(response.text)
+    
+async def verify_paystack_payment(reference: str):
+    """
+        Gets paystack subscription management link
+    """
+    url=f"{settings.paystack_base_url}/transaction/verify/{reference}"
+    headers={
+        "Authorization": f"Bearer {settings.paystack_secret_key}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(
+        url=url,
+        headers=headers
+    )
+    logger.debug(f"verify_paystack_payment response {response.status_code} {response.json()}")
+    if response.ok:
+        return response.json()
     else:
         raise Exception(response.text)
     
