@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 
+from schemas.fields import FieldResponse
+
 class ProjectBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = Field(None, max_length=500)
@@ -32,6 +34,7 @@ class ProjectReceipt(BaseModel):
 class ProjectResponse(ProjectBase):
     id: UUID
     receipts: List[ProjectReceipt]
+    fields: List[FieldResponse]
     owner: ProjectOwner
     created_at: datetime
     updated_at: Optional[datetime] = None
