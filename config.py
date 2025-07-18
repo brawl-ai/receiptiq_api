@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     postgres_db: str = ""
     postgres_host: str = ""
     postgres_port: str = "5842"
+    admin_email: str = ""
+    admin_password: str = ""
+    joe_email: str = ""
+    joe_password: str = ""
     honeybadger_api_key: str = ""
     openai_api_key: str = "testapi"
     client_id: str = ""
@@ -50,7 +54,7 @@ if len(settings.honeybadger_api_key) > 0:
     hb.configure(environment=settings.environment, api_key=settings.honeybadger_api_key,force_report_data=True)
     hb_handler = contrib.HoneybadgerHandler(api_key=settings.honeybadger_api_key)
     hb_handler.honeybadger = hb
-    hb_handler.setLevel(logging.INFO)
+    hb_handler.setLevel(logging.ERROR)
     hb_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
     logger.addHandler(hb_handler)
 

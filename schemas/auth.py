@@ -70,6 +70,15 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     is_active: Optional[bool] = None
 
+class UserSubscription(BaseModel):
+    id: UUID
+    is_active: bool
+    subscription_plan_id: UUID
+    start_at: datetime
+    end_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
 class UserResponse(UserBase):
     id: UUID
     is_active: bool
@@ -78,6 +87,7 @@ class UserResponse(UserBase):
     updated_at: Optional[datetime] = None
     scopes: List[PermissionResponse] = []
     is_subscribed: bool
+    subscriptions: List[UserSubscription] = []
 
     model_config = ConfigDict(from_attributes=True)
 
