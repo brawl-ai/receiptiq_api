@@ -122,7 +122,8 @@ async def get_current_active_verified_user(auth_user: Tuple[User, str] = Depends
 def require_scope(required_scope: str):
     def scope_checker(auth: Tuple[User, str] = Depends(get_current_active_verified_user)):
         current_user, token_scope = auth
-        if not required_scope in token_scope.split(" "):
+        if not required_scope in token_scope.split(" ") and "admin" not in [sc.codename for sc in current_user.scopes]:
+            print("Insufficient permission needed ",required_scope)
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Insufficient permissions. Required scope: {required_scope}"
