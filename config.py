@@ -71,6 +71,7 @@ permissions = [
     ('Delete Fields','delete:fields'),
     ('Read Receipts','read:receipts'),
     ('Create/Update Receipts','write:receipts'),
+    ('Delete Receipts','delete:receipts'),
     ('Read Data','read:data'),
     ('Export Data','export:data'),
 ]

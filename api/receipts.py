@@ -31,7 +31,7 @@ async def create_receipt(
             detail="Not authorized to create receipts in this project"
         )
     
-    allowed_types = ["image/jpeg", "image/png", "image/gif", "application/pdf"]
+    allowed_types = ["image/jpeg", "image/png", "application/pdf"]
     if file.content_type not in allowed_types:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -162,3 +162,46 @@ async def update_receipt(
     db.commit()
     db.refresh(receipt)
     return receipt
+
+@router.delete("/{receipt_id}/", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_receipt(
+    project_id: UUID,
+    receipt_id: UUID,
+    current_user: User = Depends(require_subscription("delete:receipts")),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a receipt's status
+    """
+    project: Project = await get_obj_or_404(
+        db=db,
+        model=Project,
+        id=project_id
+    )
+    if project.owner != current_user and not current_user.has_scope("admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update receipts in this project"
+        )
+    receipt: Receipt = await get_obj_or_404(
+        db=db,
+        model=Receipt,
+        id=receipt_id
+    )
+    if receipt not in project.receipts:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Receipt not found in this project"
+        )
+    try:
+        storage = StorageService()
+        is_deleted = storage.delete_receipt(receipt.file_path)
+        if not is_deleted:
+            raise HTTPException(status_code=500,detail={"message": f"Failed to delete receipt from storage"})
+         
+        db.delete(receipt)
+        db.commit()
+        return None
+    except Exception as e:
+        raise HTTPException(status_code=500,detail={"message": f"{e}"})
+ 

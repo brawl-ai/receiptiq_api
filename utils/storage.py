@@ -98,7 +98,7 @@ class StorageService:
             endpoint_url=settings.aws_endpoint_url_s3 or None,
             aws_access_key_id=settings.aws_access_key_id,
             aws_secret_access_key=settings.aws_secret_access_key,
-            region_name=settings.aws_endpoint_url_s3 or None,
+            region_name=settings.aws_region or None
         )
         self.bucket_name = settings.bucket_name
         self._ensure_bucket_exists()
