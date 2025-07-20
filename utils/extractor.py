@@ -247,14 +247,14 @@ JSON Response:
         description = "{\n"
         for key, value in schema.items():
             if isinstance(value, dict): 
-                if value['type'] in ['string','number','boolean']: # is this the leaf
+                if value.get('type','none') in ['string','number','boolean']: # is this the leaf
                     field_type = value['type']
                     field_desc = value.get('description', '')
                     description += f'  "{key}": {{\n "value": {field_type} // {field_desc}, "coordinates": {coordinates_schema}  }},\n'
                 else: # Nested object
                     description += f'  "{key}": '
                     description += self.describe_schema(value)
-            else:
+            elif isinstance(value, list):
                 schema0 = value[0]
                 description += f'"{key}":[\n{self.describe_schema(schema0)}\n]'
         
