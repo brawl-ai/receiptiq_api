@@ -74,39 +74,6 @@ async def get_project_data(
         })
     return receipt_data
 
-@router.put("/{data_value_id}", response_model=DataValueResponse)
-async def update_project_data(
-    project_id: UUID,
-    data_value_id: UUID,
-    data_value_update: DataValueUpdate,
-    current_user: User= Depends(require_subscription("write:data")),
-    db: Session = Depends(get_db)
-):
-    """
-        Update data value
-    """
-    project: Project = await get_obj_or_404(
-        db=db,
-        model=Project,
-        id=project_id
-    )
-    if project.owner != current_user and not current_user.has_scope("admin"):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access data in this project"
-        )
-    
-    data_value: DataValue = await get_obj_or_404(
-        db=db,
-        model=DataValue,
-        id=data_value_id
-    )
-    data_value.value = data_value_update.value
-    db.add(data_value)
-    db.commit()
-    db.refresh(data_value)
-    return data_value
-
 def save_csv(project: Project):
     path: str = f"temp/{project.name}_{project.id}.csv"
     data = []
