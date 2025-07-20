@@ -212,7 +212,6 @@ class InvoiceExtractor:
         """Build prompt for LLM extraction"""
         
         data_schema = self.describe_schema(schema)
-        print(f"JSON SCHEMA: {data_schema}")
         base_instructions = f"""
         You are an expert at extracting structured data from invoice documents.
         Extract the requested information accurately and return it as valid JSON.
