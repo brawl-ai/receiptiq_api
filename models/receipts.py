@@ -44,12 +44,16 @@ class Receipt(Model):
                     data_value = DataValue()
                 data_value.field=field
                 data_value.receipt=self
-                data_value.value=value["value"]
+                if value and value.get("value"):
+                    data_value.value=value["value"]
+                else:
+                    data_value.value=""
                 data_value.row=row_id
-                data_value.x=value["coordinates"].get("x",0)
-                data_value.y=value["coordinates"].get("y",0)
-                data_value.width=value["coordinates"].get("width",0)
-                data_value.height=value["coordinates"].get("height",0)
+                if value.get("coordinates"):
+                    data_value.x=value.get("coordinates",{}).get("x",0)
+                    data_value.y=value.get("coordinates",{}).get("y",0)
+                    data_value.width=value.get("coordinates",{}).get("width",0)
+                    data_value.height=value.get("coordinates",{}).get("height",0)
                 db.add(data_value)
                 db.commit()
                 db.refresh(data_value)
@@ -84,17 +88,28 @@ class Receipt(Model):
             self.status = "processing"
             db.add(self)
             db.flush()
-            self.add_data(db, result)                
+            self.add_data(db, result)               
             self.status = "completed"
             db.add(self)
             db.commit()
+            db.refresh(self)
+            # add empty values for non list/array field not found in result
+            for field in self.project.fields:
+                if field not in [d.field for d in self.data_values] and field.type not in ["array","object"]:
+                    data_value = DataValue()
+                    data_value.field = field
+                    data_value.receipt = self
+                    data_value.value = ""
+                    data_value.row = 0
+                    db.add(data_value)
+                    db.commit()
             db.refresh(self)
             self.delocalize()
             return self.data_values
         
         except Exception as e:
             self.status = "failed"
-            self.error_message = str(e)
+            self.error_message = str(e)[:400]
             db.add(self)
             db.commit()
             db.refresh(self)
