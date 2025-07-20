@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field, ConfigDict, computed_field
 
 from schemas.fields import FieldResponse
+from schemas.data import DataValueResponse
 from utils.helpers import get_current_request
 
 class ProjectBase(BaseModel):
@@ -27,6 +28,7 @@ class ProjectOwner(BaseModel):
 
 class ProjectReceipt(BaseModel):
     id: UUID
+    data_values: List[DataValueResponse]
     file_path: str
     file_name: str
     mime_type: str

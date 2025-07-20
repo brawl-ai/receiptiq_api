@@ -4,9 +4,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from models import User, Project, Receipt
-from schemas import ReceiptResponse, ReceiptUpdate, ListResponse
+from api.projects import prepare_schema
+from config import get_settings
+from models import DataValue, User, Project, Receipt
+from schemas import DataValueResponse, ReceiptResponse, ReceiptUpdate, ListResponse
+from schemas.data import DataValueUpdate, DataValueCreate
+from schemas.fields import FieldResponse
 from utils import get_obj_or_404, paginate, get_db, get_query_params, require_scope, require_subscription, StorageService
+from utils.extractor import InvoiceExtractor
 
 router = APIRouter(prefix="/projects/{project_id}/receipts", tags=["Receipts"])
 
@@ -163,6 +168,52 @@ async def update_receipt(
     db.refresh(receipt)
     return receipt
 
+@router.post("/{receipt_id}/process", response_model=ReceiptResponse)
+async def process_receipt(
+    project_id: UUID,
+    receipt_id: UUID,
+    current_user: User = Depends(require_subscription("process:projects")),
+    db: Session = Depends(get_db)
+):
+    """
+    Update a receipt's status
+    """
+    project: Project = await get_obj_or_404(
+        db=db,
+        model=Project,
+        id=project_id
+    )
+    if project.owner != current_user and not current_user.has_scope("admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to update receipts in this project"
+        )
+    receipt: Receipt = await get_obj_or_404(
+        db=db,
+        model=Receipt,
+        id=receipt_id
+    )
+    if receipt not in project.receipts:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Receipt not found in this project"
+        )
+    if len(project.fields) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Project has no fields defined. Please add fields before processing receipts."
+        )
+    settings = get_settings()
+    extractor = InvoiceExtractor(
+        llm_provider="openai",  # or "ollama" for local
+        model_name="gpt-4.1-nano-2025-04-14",
+        api_key=settings.openai_api_key
+    )
+    schema = prepare_schema([FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent])
+    receipt.process(db=db,extractor=extractor, schema_dict=schema)
+    db.refresh(receipt)
+    return receipt
+
 @router.delete("/{receipt_id}/", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_receipt(
     project_id: UUID,
@@ -205,3 +256,77 @@ async def delete_receipt(
     except Exception as e:
         raise HTTPException(status_code=500,detail={"message": f"{e}"})
  
+@router.post("/{receipt_id}/data", response_model=DataValueResponse)
+async def add_data_value(
+    project_id: UUID,
+    receipt_id: UUID,
+    data_value_create: DataValueCreate,
+    current_user: User= Depends(require_subscription("write:data")),
+    db: Session = Depends(get_db)
+):
+    """
+        Add data value
+    """
+    project: Project = await get_obj_or_404(
+        db=db,
+        model=Project,
+        id=project_id
+    )
+    if project.owner != current_user and not current_user.has_scope("admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to add/edit data in this project"
+        )
+    receipt: Receipt = await get_obj_or_404(
+        db=db,
+        model=Receipt,
+        id=receipt_id
+    )
+    if receipt.project != project:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This receipt does not belong to this project"
+        )
+    data_value = DataValue()
+    data_value.field_id = data_value_create.field_id
+    data_value.receipt_id = receipt_id
+    data_value.value = data_value_create.value
+    db.add(data_value)
+    db.commit()
+    db.refresh(data_value)
+    return data_value
+
+
+@router.put("/{receipt_id}/data/{data_value_id}", response_model=DataValueResponse)
+async def update_project_data(
+    project_id: UUID,
+    data_value_id: UUID,
+    data_value_update: DataValueUpdate,
+    current_user: User= Depends(require_subscription("write:data")),
+    db: Session = Depends(get_db)
+):
+    """
+        Update data value
+    """
+    project: Project = await get_obj_or_404(
+        db=db,
+        model=Project,
+        id=project_id
+    )
+    if project.owner != current_user and not current_user.has_scope("admin"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to access data in this project"
+        )
+    
+    data_value: DataValue = await get_obj_or_404(
+        db=db,
+        model=DataValue,
+        id=data_value_id
+    )
+    data_value.value = data_value_update.value
+    db.add(data_value)
+    db.commit()
+    db.refresh(data_value)
+    print(data_value.value)
+    return data_value

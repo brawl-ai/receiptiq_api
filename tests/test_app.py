@@ -248,7 +248,7 @@ async def test_process_project(mock_extract_from_document,mock_delocalize,mock_l
         # Data endpoints
         response = client.get(f"/api/v1/projects/{project.id}/data", cookies={"access_token":access_token})
         assert response.status_code == 200
-        response = client.put(f"/api/v1/projects/{project.id}/data/{data_value_id}", cookies={"access_token":access_token}, json={"value": "a"})
+        response = client.put(f"/api/v1/projects/{project.id}/receipts/{project.receipts[0].id}/data/{data_value_id}", cookies={"access_token":access_token}, json={"value": "a"})
         assert response.status_code == 200
         response = client.get(f"/api/v1/projects/{project.id}/data/csv", cookies={"access_token":access_token})
         assert response.status_code == 200
