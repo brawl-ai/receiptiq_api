@@ -77,8 +77,8 @@ permissions = [
 ]
 
 subscription_plans = [
-    ('Standard Monthly','1k invoices per month',10.00, "KES","monthly",0,"ACTIVE"),
-    ('Standard Annually','1.1k invoices per month',8, "KES","annually",0,"ACTIVE")
+    ('Launch Monthly', 'For freelancers & small teams — up to 1,000 invoices/month', 19.00, "USD", "monthly", 0, "ACTIVE"),
+    ('Launch Annual', 'For freelancers & small teams — up to 1,000 invoices/month', 180.00, "USD", "annually", 0, "ACTIVE")
 ]
 
 def get_settings():
