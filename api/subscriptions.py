@@ -23,6 +23,7 @@ async def list_plans(
     """
     List subscription plans
     """
+    params["status"]="ACTIVE"
     return await paginate(
         db=db, model=SubscriptionPlan, schema=SubscriptionPlanResponse, **params
     )
