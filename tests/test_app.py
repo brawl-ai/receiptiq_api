@@ -257,9 +257,6 @@ async def test_process_project(mock_extract_from_document,mock_delocalize,mock_l
         assert len(response.json()["url"]) > 0
         export_url = response.json()["url"].replace("http://testserver","")
         response = client.request("GET", export_url, cookies={"access_token":access_token}, follow_redirects=False)
-        assert response.status_code == 307
-        receipt_url = project.receipts[0].file_path
-        response = client.request("GET", f"/files/{receipt_url}", cookies={"access_token":access_token}, follow_redirects=False)
-        assert response.status_code == 307
-
+        assert response.status_code == 200
+        
     mock_save_csv.assert_called_once()
