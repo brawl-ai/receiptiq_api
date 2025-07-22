@@ -3,7 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from api import timedelta
-from models import BillingInterval, Permission,SubscriptionPlan, User, Payment, Subscription
+from models import BillingInterval, Permission, PlanStatus,SubscriptionPlan, User, Payment, Subscription
 from utils import create_paystack_subscription_plan, get_paystack_plans, get_db
 from config import logger, permissions, subscription_plans, get_settings
 
@@ -74,7 +74,7 @@ def create_subscription_plans(db: Session):
         if not paystack_plan:
             paystack_plan = create_paystack_subscription_plan(name=name, interval=billing_interval, amount=price, currency=currency)
         
-        db_plan = db.execute(select(SubscriptionPlan).where(SubscriptionPlan.billing_interval == BillingInterval(billing_interval))).scalar_one_or_none()
+        db_plan = db.execute(select(SubscriptionPlan).where(SubscriptionPlan.billing_interval == BillingInterval(billing_interval), SubscriptionPlan.status == PlanStatus.ACTIVE)).scalar_one_or_none()
         if not db_plan:
             db_plan = SubscriptionPlan(
                 name=name,
