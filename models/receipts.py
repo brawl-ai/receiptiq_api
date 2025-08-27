@@ -62,28 +62,19 @@ class Receipt(Model):
                         self.add_data(db, item, row_id=id)
                 else:
                     self.add_data(db, value)
-    
-    def localize(self):
-        temp_local_path = f"temp/{self.file_path}"
-        storage = StorageService()
-        storage.download_file(self.file_path, temp_local_path)
-        return temp_local_path
-    
-    def delocalize(self):
-        temp_local_path = f"temp/{self.file_path}"
-        os.remove(temp_local_path)
         
-    def process(self, db: Session, extractor: InvoiceExtractor, schema_dict: Dict[str, Any]) -> List[DataValue]:
+    def process(self, db: Session, extractor: InvoiceExtractor, fields: List[Dict[str, Any]]) -> List[DataValue]:
         """
         Process the receipt using the extractor
         """
         try:
-            temp_local_path = self.localize()
-            result,metadata = extractor.extract_from_document(
-                document_path=temp_local_path,
-                schema=schema_dict,
-                extraction_instructions="Focus on accuracy for financial amounts and dates."
+            document_url = StorageService().get_url(self.file_path)
+            result = extractor.extract_from_document(
+                document_url=document_url,
+                fields=fields,
+                file_type=self.mime_type
             )
+            # print(result)
             self.status = "processing"
             db.add(self)
             db.flush()
@@ -103,7 +94,6 @@ class Receipt(Model):
                     db.add(data_value)
                     db.commit()
             db.refresh(self)
-            self.delocalize()
             return self.data_values
         
         except Exception as e:
