@@ -37,7 +37,7 @@ def create_default_admin_user(db:Session):
         db.add(admin_user)
         db.commit()
         db.refresh(admin_user)
-    annual_plan = db.execute(select(SubscriptionPlan).where(SubscriptionPlan.billing_interval == BillingInterval.ANNUALLY)).scalar_one_or_none()
+    annual_plan = db.execute(select(SubscriptionPlan).where(SubscriptionPlan.billing_interval == BillingInterval.ANNUALLY, SubscriptionPlan.status == PlanStatus.ACTIVE)).scalar_one_or_none()
     payment_payload = {
         "event": "charge.success",
         "data": {
