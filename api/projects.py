@@ -123,17 +123,6 @@ async def delete_project(
     db.commit()
     return None
 
-def prepare_schema(fields: List):
-    schema = {}
-    for field in fields:
-        if field["type"].value == "object":
-            schema[field["name"]] = prepare_schema(field["children"])
-        elif field["type"].value == "array":
-            schema[field["name"]] = [prepare_schema(field["children"])]
-        else:
-            schema[field["name"]] = {"type": field["type"].value, "description": field["description"] }
-    return schema
-
 @router.post("/{project_id}/process", response_model=ListResponse)
 async def process(
     project_id: UUID,
@@ -166,14 +155,13 @@ async def process(
             detail="Project has no receipts to process."
         )
     extractor = InvoiceExtractor(
-        llm_provider="openai",  # or "ollama" for local
-        model_name="gpt-4.1-nano-2025-04-14",
-        api_key=settings.openai_api_key
+        llm_provider="openai",
+        model_name="gpt-5-mini"
     )
-    schema = prepare_schema([FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent])
+    fields = [FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent]
     for receipt in project.receipts:
         if receipt.status in ["pending", "completed","failed"]:
-            receipt.process(db=db,extractor=extractor, schema_dict=schema)
+            receipt.process(db=db,extractor=extractor, fields=fields)
     params["project_id"] = project.id
     return await paginate(
         db=db,

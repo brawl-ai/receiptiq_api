@@ -4,8 +4,6 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from api.projects import prepare_schema
-from config import get_settings
 from models import DataValue, User, Project, Receipt
 from schemas import DataValueResponse, ReceiptResponse, ReceiptUpdate, ListResponse
 from schemas.data import DataValueUpdate, DataValueCreate
@@ -168,6 +166,7 @@ async def update_receipt(
     db.refresh(receipt)
     return receipt
 
+
 @router.post("/{receipt_id}/process", response_model=ReceiptResponse)
 async def process_receipt(
     project_id: UUID,
@@ -203,14 +202,12 @@ async def process_receipt(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Project has no fields defined. Please add fields before processing receipts."
         )
-    settings = get_settings()
     extractor = InvoiceExtractor(
-        llm_provider="openai",  # or "ollama" for local
-        model_name="gpt-4.1-nano-2025-04-14",
-        api_key=settings.openai_api_key
+        llm_provider="openai",
+        model_name="gpt-5-mini"
     )
-    schema = prepare_schema([FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent])
-    receipt.process(db=db,extractor=extractor, schema_dict=schema)
+    fields = [FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent]
+    receipt.process(db=db,extractor=extractor, fields=fields)
     db.refresh(receipt)
     return receipt
 
