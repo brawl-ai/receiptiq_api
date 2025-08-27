@@ -15,6 +15,10 @@ class DataValueUpdate(BaseModel):
 class DataValueResponse(BaseModel):
     id: UUID
     value: str = Field(..., description="The actual value stored in a flexible format")
+    x: int
+    y: int
+    width: int
+    height: int
     field: FieldResponse
     created_at: datetime
     updated_at: Optional[datetime] = None

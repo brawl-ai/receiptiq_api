@@ -25,3 +25,7 @@ pytest-asyncio==1.0.0
 coverage==7.9.2
 moto[s3]==5.1.8
 pytest-postgresql==7.0.2
+celery==5.5.3
+redis==6.4.0
+flower==2.0.1
+Jinja2==3.1.4

@@ -1,5 +1,5 @@
 import io
-from unittest.mock import mock_open, patch
+from unittest.mock import patch
 import pytest
 from moto import mock_aws
 import pytest
@@ -215,19 +215,15 @@ def prepare_project(db:Session, project: Project) -> Project:
     return project
 
 @patch("api.data.save_csv")
-@patch("models.receipts.Receipt.localize")
-@patch("models.receipts.Receipt.delocalize")
 @patch("utils.extractor.InvoiceExtractor.extract_from_document")
 @pytest.mark.asyncio
-async def test_process_project(mock_extract_from_document,mock_delocalize,mock_localize, mock_save_csv, client,db,test_settings):
+async def test_process_project(mock_extract_from_document, mock_save_csv, client,db,test_settings):
     user, access_token = create_user(db,test_settings)
     add_subscription(db,user)
     project = add_project(db, user)
     project = prepare_project(db,project)
 
     mock_save_csv.return_value = io.BytesIO(b"fake,csv,data")
-    mock_localize.return_value = "/sample_path"
-    mock_delocalize.return_value = None
     mock_extract_from_document.return_value = {
         "first_name": {
             "value": "john", "coordinates":{"x":0,"y":2,"width":123,"height":85}
@@ -238,9 +234,8 @@ async def test_process_project(mock_extract_from_document,mock_delocalize,mock_l
         "age": {
             "value": 29, "coordinates":{"x":0,"y":2,"width":123,"height":85}
         }
-    }, {}
+    }
     
-    headers = {"Authorization": f"Bearer {access_token}"}
     with mock_aws():
         response = client.post(f"/api/v1/projects/{project.id}/process", cookies={"access_token":access_token})
         data_value_id = response.json()["data"][0]["data_values"][0]["id"]

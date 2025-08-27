@@ -9,6 +9,7 @@ services:
       - .env
     depends_on:
       - postgres
+      - redis
     networks:
       - receiptiq-network
 
@@ -26,9 +27,67 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - receiptiq-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+  redis:
+    image: redis:latest
+    ports:
+      - "9002:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - receiptiq-network
+    command: redis-server --appendonly yes
+
+  celery_worker:
+    image: python:3.11-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - receiptiq-network
+    command: >
+      sh -c "pip install -r requirements.txt && 
+             celery -A celery_app worker --loglevel=info"
+  
+  celery_flower:
+    image: python:3.11-slim
+    working_dir: /app
+    ports:
+      - "9003:5555"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - redis
+      - postgres  # Add this if Flower needs database access
+    networks:
+      - receiptiq-network
+    command: >
+      sh -c "pip install -r requirements.txt && 
+             celery -A celery_app flower"
 
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   receiptiq-network:

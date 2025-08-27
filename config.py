@@ -41,6 +41,7 @@ class Settings(BaseSettings):
     aws_region: str = ""
     aws_secret_access_key: str = ""
     bucket_name: str = ""
+    celery_broker_url: str = ""
     
     @property
     def database_url(self) -> str:
