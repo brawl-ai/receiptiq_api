@@ -13,7 +13,8 @@ from schemas.auth import (
     VerificationCodeRequest, VerificationCodeResponse,
     VerifyCodeRequest, LoginRequest, PasswordUpdate
 )
-from utils import PasswordValidator, generate_reset_token, hash_token, send_password_reset_email, send_verification_email, get_app, get_current_user, get_db, require_scope, limiter
+from utils import PasswordValidator, generate_reset_token, hash_token, get_app, get_current_user, get_db, require_scope, limiter
+from celery_app import send_password_reset_email, send_verification_email
 from config import get_settings, logger
 
 settings = get_settings()
@@ -125,7 +126,7 @@ async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = 
             code_length=settings.otp_length,
             code_expiry_seconds=settings.otp_expiry_seconds
         )
-        await send_verification_email(user.first_name,user.email, user.otp)
+        send_verification_email.delay(user.first_name,user.email, user.otp)
         user_data = UserResponse.model_validate(user)
         return {"message": "User created successfully. Check your email for otp code", "user": user_data.model_dump()}
     except Exception as e:
@@ -166,7 +167,7 @@ async def get_otp(request: Request,get_code_request: VerificationCodeRequest, db
             code_length=settings.otp_length,
             code_expiry_seconds=settings.otp_expiry_seconds
         )
-        await send_verification_email(user.first_name, user.email, user.otp)
+        send_verification_email.delay(user.first_name, user.email, user.otp)
         return {"message": f"OTP code sent to {user.email}"}
     except Exception as e:
         logger.error(e)
@@ -481,7 +482,7 @@ async def forgot_password(request: Request, forgot_password_request: ForgotPassw
     )
     db.add(reset_token)
     db.commit()
-    await send_password_reset_email(user.email, token)
+    send_password_reset_email.delay(user.email, token)
     return ForgotPasswordResponse(message="If an account with that email exists, you will receive a password reset link shortly.")
 
 @router.post("/password/reset")
@@ -602,7 +603,7 @@ async def update_user_profile(update_payload: UserUpdate,current_user: User = De
             code_length=settings.otp_length,
             code_expiry_seconds=settings.otp_expiry_seconds
         )
-        await send_verification_email(current_user.first_name,current_user.email, current_user.otp)
+        send_verification_email.delay(current_user.first_name,current_user.email, current_user.otp)
     user_data = UserResponse.model_validate(current_user)
     return {"message": "User updated successfully. Any new email needs to be verified", "user": user_data.model_dump()}
 
