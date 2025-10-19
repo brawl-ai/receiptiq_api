@@ -33,6 +33,7 @@ class ProjectReceipt(BaseModel):
     file_name: str
     mime_type: str
     status: str
+    created_at: datetime
 
     @computed_field
     @property
