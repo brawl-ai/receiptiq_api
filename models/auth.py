@@ -7,15 +7,13 @@ from typing import Any, Dict, List, Optional, Tuple
 import uuid
 from fastapi import HTTPException
 import jwt
-from passlib.context import CryptContext
+import bcrypt
 from sqlalchemy import JSON, UUID, Boolean, Column, DateTime, ForeignKey, Integer, String, Table, func, select, true
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from models import Model
 from config import logger, settings
 from models.subscriptions import Subscription
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 user_permissions_association = Table(
     'user_permissions',
@@ -71,7 +69,7 @@ class User(Model):
         """
         Hash and set the user's password
         """
-        self.password_hash = pwd_context.hash(password)
+        self.password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         logger.info(f"Password set for user {self.email}")
 
     def verify_password(self, password: str) -> bool:
@@ -80,7 +78,7 @@ class User(Model):
         """
         if not self.password_hash:
             return False
-        return pwd_context.verify(password, self.password_hash)
+        return bcrypt.checkpw(password=password.encode("utf-8"), hashed_password=self.password_hash.encode("utf-8"))
 
     async def create_otp(self, db: Session, code_length: int, code_expiry_seconds: int) -> "User":
         """

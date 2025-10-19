@@ -15,7 +15,7 @@ opencv-python==4.11.0.86
 uvicorn==0.34.2
 email-validator==2.2.0
 python-multipart==0.0.20
-passlib[bcrypt]==1.7.4
+bcrypt==5.0.0
 slowapi==0.1.9
 resend==2.10.0
 alembic==1.16.1
