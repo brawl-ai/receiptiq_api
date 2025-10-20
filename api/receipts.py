@@ -325,5 +325,4 @@ async def update_project_data(
     db.add(data_value)
     db.commit()
     db.refresh(data_value)
-    print(data_value.value)
     return data_value
