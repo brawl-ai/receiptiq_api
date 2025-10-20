@@ -113,7 +113,6 @@ class InvoiceExtractor:
                     "additionalProperties": False
                 }
             }
-            # print(schema)
             return self.call_openai(document_url, schema, file_type)
 
         elif self.llm_provider == "ollama":
@@ -144,7 +143,6 @@ class InvoiceExtractor:
                     "type": "input_image",
                     "image_url": document_url
                 }
-            print(receipt)
             response = self.client.responses.create(
                 model=self.model_name,
                 input=[
