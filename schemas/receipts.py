@@ -47,7 +47,11 @@ class ReceiptResponse(BaseModel):
         """Compute the download URL from the current request context"""
         request = get_current_request()
         if request:
-            return f"{request.base_url}files/{self.file_path}"
+            if "api.receiptiq.co" in str(request.base_url):
+                base_url = str(request.base_url).replace("http","https")
+            else:
+                base_url = request.base_url
+            return f"{base_url}files/{self.file_path}"
         filename = self.file_path.split('/')[-1] if '/' in self.file_path else self.file_path
         return f"/files/{filename}"
 
