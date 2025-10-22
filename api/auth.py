@@ -1,13 +1,13 @@
 import hashlib
-from typing import Optional, Tuple
+from typing import Tuple
 import datetime
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from slowapi.util import get_remote_address
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from models import AuditLog, LoginAttempt, PasswordResetToken, Permission, RefreshToken, RevokedToken, User
-from schemas import ForgotPasswordRequest, ForgotPasswordResponse, RefreshTokenRequest, RefreshTokenResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeTokenRequest, UserUpdate
+from models import LoginAttempt, PasswordResetToken, Permission, RefreshToken, RevokedToken, User
+from schemas import ForgotPasswordRequest, ForgotPasswordResponse, RefreshTokenResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeTokenRequest, UserUpdate
 from schemas.auth import (
     UserCreate, UserResponse, TokenResponse,
     VerificationCodeRequest, VerificationCodeResponse,
@@ -40,36 +40,12 @@ def revoke_token(token: str, token_type: str, db: Session, expires_at: datetime 
 
 def revoke_all_user_tokens(user_id: str, db: Session):
     """Revoke all tokens for a user"""
-    # Mark all refresh tokens as revoked
     db.query(RefreshToken).filter(
         RefreshToken.user_id == user_id,
         RefreshToken.revoked == False
     ).update({"revoked": True})
     
     db.commit()
-
-def record_security_event(
-    action: str,
-    request: Request,
-    user_id: Optional[str],
-    details: Optional[dict],
-    db: Session
-):
-    """Log security-related events"""
-    audit_log = AuditLog(
-        user_id=user_id,
-        action=action,
-        ip_address=get_remote_address(request),
-        user_agent=request.headers.get("user-agent"),
-        details=details
-    )
-    db.add(audit_log)
-    db.commit()
-    logger.info(f"Security Event: {action}", extra={
-        "user_id": user_id,
-        "ip_address": get_remote_address(request),
-        "details": details
-    })
 
 def record_login_attempt(http_request: Request, email: str, success: bool, db: Session):
     """Record login attempt"""
@@ -92,6 +68,7 @@ async def signup(user_in: UserCreate, db: Session = Depends(get_db), _: Tuple = 
         - **last_name**: User's last name  
         - **email**: User's email address (must be unique)
         - **password**: User's password
+        - **accepted_terms**: Whether the user has accepted terms & conditions
         
         **Authentication:**
         - Client credentials via `Authorization: Basic <base64(client_id:client_secret)>`
@@ -140,23 +117,16 @@ async def get_otp(request: Request,get_code_request: VerificationCodeRequest, db
         Request a new OTP verification code
         
         Generates and sends a fresh OTP code to the user's email address.
-        Use this to resend verification codes or get a new code if the 
-        previous one expired.
+        Use this to resend verification codes or get a new code if the previous one expired.
         
         **Parameters:**
         - **email**: User's email address
 
         **Authentication:**
         - Client credentials via `Authorization: Basic <base64(client_id:client_secret)>`
-        
-        **Use Cases:**
-        - Resend verification code during signup
-        - Get new code if previous one expired
-        - Replace lost or undelivered codes
-        - Request one for use as the login mechanism
    """
     try:
-        user: User = db.execute(select(User).where(User.email == get_code_request.email)).scalars().first()
+        user: User | None = db.execute(select(User).where(User.email == get_code_request.email)).scalars().first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -179,8 +149,8 @@ async def check_otp(request: Request, verify_request: VerifyCodeRequest, db: Ses
     """
         Verify email with OTP code
         
-        Validates the OTP code sent to user's email and returns an access token
-        upon successful verification. This completes the email verification process.
+        Validates the OTP code sent to user's email and returns an access token upon successful verification. 
+        This completes the email verification process.
         
         **Parameters:**
         - **email**: User's email address
@@ -196,7 +166,7 @@ async def check_otp(request: Request, verify_request: VerifyCodeRequest, db: Ses
         **Note:** User can immediately use the returned token to access protected endpoints
     """
     try:
-        user: User = db.execute(select(User).where(User.email == verify_request.email)).scalars().first()
+        user: User | None = db.execute(select(User).where(User.email == verify_request.email)).scalars().first()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -247,10 +217,13 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
     user = None
     try:        
         if login_request.grant_type != "password":
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, {
-                "error": "unsupported_grant_type",
-                "error_description": f"Grant type '{login_request.grant_type}' is not supported. Use 'password'."
-            })
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, 
+                {
+                    "error": "unsupported_grant_type",
+                    "error_description": f"Grant type '{login_request.grant_type}' is not supported. Use 'password'."
+                }
+            )
         
         user: User = db.execute(select(User).where(User.email == login_request.username)).scalars().first()
         
@@ -288,13 +261,6 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             success=True, 
             db=db
         )
-        record_security_event(
-            action="LOGIN_SUCCESS",
-            request=request,
-            user_id=user.id,
-            details={"email": user.email, "scopes": granted_scopes},
-            db=db
-        )
         response = JSONResponse(content={
             "success": True
         })
@@ -327,28 +293,16 @@ async def token(request: Request,login_request: LoginRequest = Form(), db: Sessi
             else:
                 user.failed_login_attempts += 1
             db.commit()
-            record_security_event(
-                action="LOGIN_FAILED",
-                user_id=user.id,
-                request=request,
-                details={"email": user.email, "error": str(e)},
-                db=db
-            )
-        else:
-            record_security_event(
-                action="LOGIN_FAILED",
-                user_id=None,
-                request=request,
-                details={"email": login_request.username, "error": str(e)},
-                db=db
-            )
         record_login_attempt(
             http_request=request,
             email=login_request.username,
             success=False,
             db=db
         )
-        raise
+        if isinstance(e, HTTPException):
+            raise e
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"message":f"{e}"})
 
 @router.post("/token/refresh", response_model=RefreshTokenResponse)
 async def refresh_token(request: Request,db: Session = Depends(get_db), _ = Depends(get_app)):
@@ -368,50 +322,57 @@ async def refresh_token(request: Request,db: Session = Depends(get_db), _ = Depe
     **Returns:**
     - **success**: True/False
     """
-    _refresh_token = request.cookies.get("refresh_token")
-    if not _refresh_token:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
-    user: User = User.verify_refresh_token(_refresh_token, db)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"error": "invalid_grant", "error_description": "Invalid or expired refresh token"}
+    try:
+        _refresh_token = request.cookies.get("refresh_token")
+        if not _refresh_token:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Missing refresh token")
+        user: User | None = User.verify_refresh_token(_refresh_token, db)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "invalid_grant", "error_description": "Invalid or expired refresh token"}
+            )
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={"error": "invalid_grant", "error_description": "User account is inactive"}
+            )
+        access_token = user.create_jwt_token(
+            secret=settings.secret_key,
+            algorithm=settings.algorithm,
+            expiry_seconds=settings.access_token_expiry_seconds,
+            granted_scopes=[perm.codename for perm in user.scopes]
         )
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"error": "invalid_grant", "error_description": "User account is inactive"}
+        new_refresh_token = user.create_refresh_token(db)
+        revoke_token(_refresh_token, "refresh", db)
+        response = JSONResponse(content={"success": True})
+        response.set_cookie(
+            key="access_token",
+            value=access_token,
+            httponly=True,
+            secure=True,
+            samesite="lax",
+            max_age=settings.access_token_expiry_seconds,
+            path="/",
+            domain=".receiptiq.co" if settings.environment == "production" else None
         )
-    access_token = user.create_jwt_token(
-        secret=settings.secret_key,
-        algorithm=settings.algorithm,
-        expiry_seconds=settings.access_token_expiry_seconds,
-        granted_scopes=[perm.codename for perm in user.scopes]
-    )
-    new_refresh_token = user.create_refresh_token(db)
-    revoke_token(_refresh_token, "refresh", db)
-    response = JSONResponse(content={"success": True})
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=settings.access_token_expiry_seconds,
-        path="/",
-        domain=".receiptiq.co" if settings.environment == "production" else None
-    )
-    response.set_cookie(
-        key="refresh_token",
-        value=new_refresh_token,
-        httponly=True,
-        secure=True,
-        samesite="strict",
-        max_age=settings.refresh_token_expiry_seconds,
-        path="/",
-        domain=".receiptiq.co" if settings.environment == "production" else None
-    )
-    return response
+        response.set_cookie(
+            key="refresh_token",
+            value=new_refresh_token,
+            httponly=True,
+            secure=True,
+            samesite="strict",
+            max_age=settings.refresh_token_expiry_seconds,
+            path="/",
+            domain=".receiptiq.co" if settings.environment == "production" else None
+        )
+        return response
+    except Exception as e:
+        logger.error(e)
+        if isinstance(e, HTTPException):
+            raise e
+        else:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail={"message":f"{e}"})
 
 @router.post("/token/revoke")
 async def revoke_token_endpoint(revoke_token_request: RevokeTokenRequest,db: Session = Depends(get_db),_ = Depends(get_app)):
@@ -436,7 +397,7 @@ async def revoke_token_endpoint(revoke_token_request: RevokeTokenRequest,db: Ses
     """
     try:
         if revoke_token_request.token_type_hint == "refresh_token":
-            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            token_hash = hashlib.sha256(revoke_token_request.token.encode()).hexdigest()
             refresh_token_obj = db.query(RefreshToken).filter(
                 RefreshToken.token_hash == token_hash
             ).first()
@@ -463,7 +424,7 @@ async def forgot_password(request: Request, forgot_password_request: ForgotPassw
         Sends a password reset token to the user's email if the account exists.
         Always returns success message for security (doesn't reveal if email exists).
     """
-    user: User = db.execute(select(User).where(User.email == forgot_password_request.email)).scalars().first()
+    user: User | None = db.execute(select(User).where(User.email == forgot_password_request.email)).scalars().first()
     if not user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -526,12 +487,7 @@ async def reset_password(reset_password_request: ResetPasswordRequest, db: Sessi
         )
 
 @router.post("/password/change", response_model=ResetPasswordResponse)
-async def change_password(
-    request: Request,
-    password_update: PasswordUpdate,
-    current_user: User = Depends(require_scope("write:profile")),
-    db: Session = Depends(get_db)
-):
+async def change_password(request: Request, password_update: PasswordUpdate, current_user: User = Depends(require_scope("write:profile")), db: Session = Depends(get_db)):
     """
         Change current password
         
@@ -548,13 +504,6 @@ async def change_password(
             detail={"message": "New password does not meet requirements", "errors": errors}
         )
     if not current_user.verify_password(password_update.current_password):
-        record_security_event(
-            action="PASSWORD_CHANGE_FAILED",
-            request=request,
-            user_id=current_user.id,
-            details={"reason": "incorrect_current_password"},
-            db=db
-        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect current password"
@@ -564,13 +513,6 @@ async def change_password(
     db.commit()
     db.refresh(current_user)
     revoke_all_user_tokens(current_user.id, db)
-    record_security_event(
-        action="PASSWORD_CHANGED",
-        request=request,
-        user_id=current_user.id,
-        details={"tokens_revoked": True},
-        db=db
-    )
     return ResetPasswordResponse(
             message="Password has been updated successfully."
         )
@@ -608,11 +550,7 @@ async def update_user_profile(update_payload: UserUpdate,current_user: User = De
     return {"message": "User updated successfully. Any new email needs to be verified", "user": user_data.model_dump()}
 
 @router.post("/logout")
-async def logout(
-    request: Request,
-    auth: Tuple[User, str] = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
+async def logout(request: Request, auth: Tuple[User, str] = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     User Logout
     
@@ -634,13 +572,6 @@ async def logout(
     try:
         revoke_token(token, "access", db)
         revoke_all_user_tokens(current_user.id, db)
-        record_security_event(
-            action="LOGOUT",
-            request=request,
-            user_id=current_user.id,
-            details={"email": current_user.email},
-            db=db
-        )
         logger.info(f"User {current_user.id} logged out successfully")
         response = JSONResponse(content={"message": "Logout successful"})
         response.delete_cookie(
