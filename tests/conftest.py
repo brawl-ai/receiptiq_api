@@ -28,6 +28,9 @@ def test_settings(monkeypatch, postgresql_proc):
     monkeypatch.setenv("AWS_REGION", "")
     monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "")
     monkeypatch.setenv("BUCKET_NAME", "test-bucket")
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-google-client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+    monkeypatch.setenv("GOOGLE_REDIRECT_URI", "test.google.redirect.callback.url")
 
     
     return Settings()

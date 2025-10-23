@@ -3,7 +3,8 @@ import hmac
 import re
 import secrets
 import subprocess
-from typing import List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
+from urllib import response
 from fastapi import HTTPException, Request, UploadFile
 from pathlib import Path
 import requests
@@ -203,6 +204,31 @@ async def verify_paystack_signature(request: Request):
     if not hash_value == signature:
         logger.warning(f"Invalid signature")
         raise HTTPException(status_code=400, detail="Invalid signature")
+
+
+async def get_google_userinfo(access_token: str):
+    response = requests.get("https://openidconnect.googleapis.com/v1/userinfo",headers={"Authorization": f"Bearer {access_token}"})
+    if response.ok:
+        return response.json()
+    else:
+        raise Exception(response.text)
+
+
+async def get_google_access_token(code: str) -> Dict:
+    token_url = "https://oauth2.googleapis.com/token"
+    token_data = {
+        "code": code,
+        "client_id": settings.google_client_id,
+        "client_secret": settings.google_client_secret,
+        "redirect_uri": settings.google_redirect_uri,
+        "grant_type": "authorization_code",
+    }
+    token_response = requests.post(token_url, data=token_data)
+    if response.ok:
+        return response.json()
+    else:
+        raise Exception(response.text)
+
 
 def get_git_commit_hash():
     try:
