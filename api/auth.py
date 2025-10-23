@@ -1,7 +1,8 @@
 import hashlib
+import secrets
 from typing import Tuple
 import datetime
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from slowapi.util import get_remote_address
 from sqlalchemy import select
@@ -9,11 +10,11 @@ from sqlalchemy.orm import Session
 from models import LoginAttempt, PasswordResetToken, Permission, RefreshToken, RevokedToken, User
 from schemas import ForgotPasswordRequest, ForgotPasswordResponse, RefreshTokenResponse, ResetPasswordRequest, ResetPasswordResponse, RevokeTokenRequest, UserUpdate
 from schemas.auth import (
-    UserCreate, UserResponse, TokenResponse,
+    GoogleCallback, UserCreate, UserResponse, TokenResponse,
     VerificationCodeRequest, VerificationCodeResponse,
     VerifyCodeRequest, LoginRequest, PasswordUpdate
 )
-from utils import PasswordValidator, generate_reset_token, hash_token, get_app, get_current_user, get_db, require_scope, limiter
+from utils import PasswordValidator, generate_reset_token, hash_token, get_app, get_current_user, get_db, require_scope, limiter, get_google_access_token, get_google_userinfo
 from celery_app import send_password_reset_email, send_verification_email
 from config import get_settings, logger
 
@@ -597,3 +598,78 @@ async def logout(request: Request, auth: Tuple[User, str] = Depends(get_current_
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"message": "An error occurred during logout"}
         )
+
+@router.get("/google/login")
+async def google_login(request: Request, _ = Depends(get_app)):
+    try:
+        google_auth_endpoint = "https://accounts.google.com/o/oauth2/v2/auth"
+        scope = "openid email profile"
+        redirect_url = (
+            f"{google_auth_endpoint}"
+            f"?response_type=code"
+            f"&client_id={settings.google_client_id}"
+            f"&redirect_uri={settings.google_redirect_uri}"
+            f"&scope={scope}"
+            f"&access_type=offline"
+            f"&prompt=consent"
+        )
+        return JSONResponse(status_code=status.HTTP_200_OK, content={"redirect_to": redirect_url})
+    except Exception as e:
+        raise e
+
+@router.post("/google/callback")
+async def google_callback(request: Request, google_callback: GoogleCallback, db: Session = Depends(get_db), _ = Depends(get_app)):
+    # Exchange authorization code for google access token
+    google_access_code = (await get_google_access_token(code=google_callback.code)).get("access_code")
+    # fetch google user email
+    user_info = await get_google_userinfo(access_token=google_access_code)
+    # get or create user
+    email = user_info.get("email")
+    first_name = user_info.get("given_name") or user_info.get("name")
+    last_name = user_info.get("family_name") or user_info.get("name")
+    user: User | None = db.execute(select(User).where(User.email == email)).scalars().first()
+    if not user:
+        user = User(
+            first_name=first_name,
+            last_name=last_name,
+            email=email
+        )
+        user.set_password(secrets.token_urlsafe(10))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    record_login_attempt(
+        http_request=request,
+        email=email, 
+        success=True, 
+        db=db
+    )
+    access_token = user.create_jwt_token(
+        secret=settings.secret_key,
+        algorithm=settings.algorithm,
+        expiry_seconds=settings.access_token_expiry_seconds,
+        granted_scopes="read:profile"
+    )
+    response = JSONResponse(content={"success": True})
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.access_token_expiry_seconds,
+        path="/",
+        domain=".receiptiq.co" if settings.environment == "production" else None
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=60*60*24*30,
+        path="/",
+        domain=".receiptiq.co" if settings.environment == "production" else None
+    )
+    return response
+    

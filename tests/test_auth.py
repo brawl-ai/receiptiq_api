@@ -625,3 +625,38 @@ class TestAuthEndpoints:
             headers=cookies
         )
         assert response.status_code == 401
+
+    @patch("api.auth.get_google_access_token")
+    @patch("api.auth.get_google_userinfo")
+    def test_google_login(self, mock_get_google_userinfo, mock_get_google_access_token, client, test_settings, db):
+        mock_get_google_access_token.return_value = {"access_token": "test_token"}
+        mock_get_google_userinfo.return_value = {
+            "email": self.test_user_data.get("email"),
+            "given_name": self.test_user_data.get("first_name"),
+            "family_name": self.test_user_data.get("last_name"),
+        }
+        headers = self.get_auth_headers(test_settings)
+        # Create verified user with permissions
+        user = User(
+            first_name=self.test_user_data["first_name"],
+            last_name=self.test_user_data["last_name"],
+            email=self.test_user_data["email"],
+            is_verified=True,
+            is_active=True
+        )
+        user.set_password(self.test_user_data["password"])
+        permission = db.execute(select(Permission).where(Permission.codename == "write:profile")).scalar_one_or_none()        
+        user.scopes.append(permission)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        # test initialization of login
+        response = client.get("/api/v1/auth/google/login",headers=headers)
+        assert response.status_code == 200
+        assert response.json()["redirect_to"] != None
+        # test auth callback
+        response = client.post("/api/v1/auth/google/callback",headers=headers, json={"code": "fake_auth_code"})
+        print(response.text)
+        assert response.status_code == 200
+        assert response.json()["success"] == True
+        assert response.cookies.get("access_token") != None
