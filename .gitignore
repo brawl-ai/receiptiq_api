@@ -9,3 +9,4 @@ test.py
 .coverage
 __pycache__
 openapi.json
+*.log

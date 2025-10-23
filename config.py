@@ -1,6 +1,5 @@
 from functools import lru_cache
 import logging
-from honeybadger import Honeybadger, contrib
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -27,7 +26,6 @@ class Settings(BaseSettings):
     admin_password: str = ""
     joe_email: str = ""
     joe_password: str = ""
-    honeybadger_api_key: str = ""
     openai_api_key: str = "testapi"
     client_id: str = ""
     client_secret: str = ""
@@ -52,15 +50,11 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-logger = logging.getLogger('HB')
-if len(settings.honeybadger_api_key) > 0:    
-    hb = Honeybadger()
-    hb.configure(environment=settings.environment, api_key=settings.honeybadger_api_key,force_report_data=True)
-    hb_handler = contrib.HoneybadgerHandler(api_key=settings.honeybadger_api_key)
-    hb_handler.honeybadger = hb
-    hb_handler.setLevel(logging.ERROR)
-    hb_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-    logger.addHandler(hb_handler)
+logger = logging.getLogger('ReceiptIQ')
+file_handler = logging.FileHandler("receiptiq.log", encoding="utf-8")
+file_handler.setLevel(logging.ERROR)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(file_handler)
 
 permissions = [
     ('Admin','admin'),
