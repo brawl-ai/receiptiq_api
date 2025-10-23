@@ -105,7 +105,6 @@ The following environment variables can be configured:
 - `BUCKET_NAME`: S3 bucket name
 - `PAYSTACK_SECRET_KEY`: Paystack payment gateway key
 - `RESEND_API_KEY`: Email service API key
-- `HONEYBADGER_API_KEY`: Error monitoring service key
 
 ## How It Works
 
