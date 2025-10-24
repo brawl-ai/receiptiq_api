@@ -7,7 +7,7 @@ from fastapi import Depends, HTTPException, Header, Query, Request, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from sqlalchemy.orm import Session, sessionmaker
-from models.subscriptions import Subscription
+from models.subscriptions import Payment
 from models.auth import RevokedToken,User
 from config import get_settings, logger
 
@@ -133,12 +133,12 @@ def require_scope(required_scope: str):
 
 def require_subscription(required_scope: str):
     def subscription_checker(scoped_user: User= Depends(require_scope(required_scope)), db: Session = Depends(get_db)):
-        subscription: Subscription = db.execute(select(Subscription)
+        payment: Payment | None = db.execute(select(Payment)
                                     .where(
-                                        Subscription.user_id == scoped_user.id,
-                                        Subscription.end_at > func.now()  # Check if subscription is active
+                                        Payment.user_id == scoped_user.id,
+                                        Payment.subscription_end_at > func.now()  # Check if subscription is active
                                     )).scalar_one_or_none()
-        if not subscription:
+        if not payment:
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail=f"You do not have an active subscription"

@@ -3,7 +3,8 @@ from unittest.mock import AsyncMock, patch
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from models import SubscriptionPlan, User, Subscription
+from models import SubscriptionPlan, User
+from models.subscriptions import Payment
 
 test_user_data = {
     "first_name": "John",
@@ -85,13 +86,12 @@ async def test_webhook_subscription_create(mock_verify, client, db, test_setting
     db.add(plan)
     db.commit()
     db.refresh(plan)
-    user = create_user(db=db)
-    access_token = user.create_jwt_token(test_settings.secret_key,algorithm=test_settings.algorithm,expiry_seconds=test_settings.access_token_expiry_seconds)
     mock_verify.return_value = True
+    user = create_user(db=db)
     payload = {
         "event": "subscription.create",
         "data": {
-            "customer": {"email": test_user_data["email"]},
+            "customer": {"email": user.email},
             "subscription_code": "sub_123",
             "plan": {"plan_code": "pro-code"}
         }
@@ -121,16 +121,12 @@ async def test_webhook_charge_success_creates_payment(mock_verify, client, db, t
     db.commit()
     db.refresh(plan)
     user = create_user(db=db)
-    sub = Subscription(user_id=user.id, subscription_plan_id=plan.id, subscription_code="sub_321", start_at=datetime.now(timezone.utc), end_at=datetime.now(timezone.utc) + timedelta(days=30))
-    db.add(sub)
-    db.commit()
-    db.refresh(sub)
-    access_token = user.create_jwt_token(test_settings.secret_key,algorithm=test_settings.algorithm,expiry_seconds=test_settings.access_token_expiry_seconds)
     mock_verify.return_value = True
     payload = {
         "event": "charge.success",
         "data": {
             "id": 1828382,
+            "subscription_code": "SUB0001",
             "customer": {"email": user.email},
             "plan": {"plan_code": "pro-code"},
             "amount": 1500,
@@ -160,12 +156,27 @@ async def test_get_subscription_update_link(mock_link, client, db, test_settings
     db.commit()
     db.refresh(plan)
     user = create_user(db=db)
-    sub = Subscription(user_id=user.id, subscription_plan_id=plan.id, subscription_code="sub_321", start_at=datetime.now(timezone.utc), end_at=datetime.now(timezone.utc) + timedelta(days=30))
-    db.add(sub)
+    payload = {
+        "event": "charge.success",
+        "data": {
+            "id": 1828382,
+            "subscription_code": "SUB0001",
+            "customer": {"email": user.email},
+            "plan": {"plan_code": "pro-code"},
+            "amount": 1500,
+            "status": "success",
+        }
+    }
+    data = payload["data"]
+    data["subscription_plan_id"] = plan.id
+    data["subscription_start_at"] = datetime.now(timezone.utc)
+    data["subscription_end_at"] = datetime.now(timezone.utc) + timedelta(days=plan.days)
+    payment = Payment.create_from_paystack_response(user_id=user.id, data=data)
+    db.add(payment)
     db.commit()
-    db.refresh(sub)
+    db.refresh(payment)
     access_token = user.create_jwt_token(test_settings.secret_key,algorithm=test_settings.algorithm,expiry_seconds=test_settings.access_token_expiry_seconds)
     mock_link.return_value = {"link": "https://paystack.com/manage/sub_test"}
-    response = client.get(f"/api/v1/subscriptions/{sub.id}/update_subscription_link", cookies={"access_token":access_token})
+    response = client.get(f"/api/v1/subscriptions/{payment.id}/update_subscription_link", cookies={"access_token":access_token})
     assert response.status_code == 200
     assert response.json()["link"].startswith("https://paystack.com")

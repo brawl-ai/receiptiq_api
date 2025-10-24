@@ -13,7 +13,6 @@ from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
 from models import Model
 from config import logger, settings
-from models.subscriptions import Subscription
 
 user_permissions_association = Table(
     'user_permissions',
@@ -62,8 +61,7 @@ class User(Model):
         back_populates='users'
     )
     refresh_tokens: Mapped[List["RefreshToken"]] = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
-    payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="user", cascade="all, delete-orphan") # type: ignore
-    subscriptions: Mapped[List["Subscription"]] = relationship("Subscription", back_populates="user", cascade="all, delete-orphan") # type: ignore
+    subscriptions: Mapped[List["Payment"]] = relationship("Payment", back_populates="user", cascade="all, delete-orphan") # type: ignore
 
     def set_password(self, password: str) -> None:
         """

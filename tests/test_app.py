@@ -3,11 +3,13 @@ from unittest.mock import patch
 import pytest
 from moto import mock_aws
 import pytest
-from models import Project, User, Permission, SubscriptionPlan, Subscription, Field, FieldType, Receipt
+from models import Project, User, Permission, SubscriptionPlan, Field, FieldType, Receipt
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from datetime import timezone, datetime, timedelta
+
+from models.subscriptions import Payment
 
 TEST_USER = {
     "first_name": "John",
@@ -62,10 +64,25 @@ def add_subscription(db: Session, user: User):
     db.add(plan)
     db.commit()
     db.refresh(plan)
-    sub = Subscription(user_id=user.id, subscription_plan_id=plan.id, subscription_code="sub_321", start_at=datetime.now(timezone.utc), end_at=datetime.now(timezone.utc) + timedelta(days=30))
-    db.add(sub)
+    payload = {
+        "event": "charge.success",
+        "data": {
+            "id": 1828382,
+            "subscription_code": "SUB0001",
+            "customer": {"email": user.email},
+            "plan": {"plan_code": "pro-code"},
+            "amount": 1500,
+            "status": "success",
+        }
+    }
+    data = payload["data"]
+    data["subscription_plan_id"] = plan.id
+    data["subscription_start_at"] = datetime.now(timezone.utc)
+    data["subscription_end_at"] = datetime.now(timezone.utc) + timedelta(days=plan.days)
+    payment = Payment.create_from_paystack_response(user_id=user.id, data=data)
+    db.add(payment)
     db.commit()
-    db.refresh(sub)
+    db.refresh(payment)
 
 @pytest.mark.asyncio
 async def test_projects(client, db, test_settings):

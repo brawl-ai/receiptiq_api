@@ -6,6 +6,7 @@ from typing import List, Optional
 from sqlalchemy import BigInteger, String, DateTime, ForeignKey, Float, Text, Integer
 from sqlalchemy.orm import Mapped, mapped_column,relationship
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from config import subscription_plans
 from models import Model
 from typing import Optional, List
 from sqlalchemy import String, DateTime, ForeignKey, Enum
@@ -62,7 +63,7 @@ class SubscriptionPlan(Model):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=datetime.now)
 
-    subscriptions: Mapped["Subscription"] = relationship("Subscription", back_populates="plan") # type: ignore
+    payments: Mapped["Payment"] = relationship("Payment", back_populates="plan") # type: ignore
 
     @property
     def days(self):
@@ -86,7 +87,8 @@ class Payment(Model):
     
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    subscription_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("subscriptions.id"), nullable=True, unique=True)
+    subscription_code: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    subscription_plan_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("subscription_plans.id"))
     transaction_id: Mapped[Optional[int]] = mapped_column(BigInteger)  # Paystack ID (4099260516)
     domain: Mapped[Optional[str]] = mapped_column(String(50))  # test/live
     status: Mapped[PaymentStatus] = mapped_column(Enum(PaymentStatus), default=PaymentStatus.PENDING)
@@ -96,7 +98,8 @@ class Payment(Model):
     message: Mapped[Optional[str]] = mapped_column(Text)
     gateway_response: Mapped[Optional[str]] = mapped_column(String(255))
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+    subscription_start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    subscription_end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     channel: Mapped[Optional[PaymentChannel]] = mapped_column(Enum(PaymentChannel), default=PaymentChannel.CARD)
     currency: Mapped[CurrencyType] = mapped_column(Enum(CurrencyType), default=CurrencyType.USD)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45))  # Support IPv6
@@ -116,10 +119,11 @@ class Payment(Model):
     connect: Mapped[Optional[str]] = mapped_column(JSONB)  # Connect details
     transaction_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     subaccount: Mapped[Optional[str]] = mapped_column(JSONB)  # Subaccount details
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=datetime.now)
-
-    user = relationship("User", back_populates="payments")
-    subscription: Mapped["Subscription"] = relationship("Subscription", back_populates="payment")
+    
+    user = relationship("User", back_populates="subscriptions")
+    plan: Mapped["SubscriptionPlan"] = relationship("SubscriptionPlan", back_populates="payments")
     
     @property
     def net_amount(self) -> decimal.Decimal:
@@ -149,6 +153,8 @@ class Payment(Model):
         
         return cls(
             user_id=user_id,
+            subscription_code = data.get("subscription_code"),
+            subscription_plan_id = data.get("subscription_plan_id"),
             transaction_id=data.get('id'),
             domain=data.get('domain'),
             status=PaymentStatus(data.get('status', 'pending')),
@@ -158,6 +164,8 @@ class Payment(Model):
             message=data.get('message'),
             gateway_response=data.get('gateway_response'),
             paid_at=datetime.fromisoformat(data.get('paid_at').replace('Z', '+00:00')) if data.get('paid_at') else None,
+            subscription_start_at = data.get("subscription_start_at"),
+            subscription_end_at = data.get("subscription_end_at"),
             created_at=datetime.fromisoformat(data.get('created_at').replace('Z', '+00:00')) if data.get('created_at') else None,
             channel=PaymentChannel(data.get('channel')) if data.get('channel') else None,
             currency=CurrencyType(data.get('currency', 'USD')),
@@ -183,38 +191,10 @@ class Payment(Model):
     def __repr__(self):
         return f"<Payment(id={self.id}, reference='{self.reference}', amount={self.amount}, status='{self.status}')>"
 
-class Subscription(Model):
-    __tablename__ = "subscriptions"
-    
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
-    subscription_plan_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("subscription_plans.id"))
-    subscription_code: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
-    updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime, onupdate=datetime.now)
-    
-    user: Mapped["User"] = relationship("User", back_populates="subscriptions") # type: ignore
-    plan: Mapped["SubscriptionPlan"] = relationship("SubscriptionPlan", back_populates="subscriptions")
-    payment: Mapped[Optional["Payment"]] = relationship("Payment", back_populates="subscription", uselist=False)
-
-    def clone(self):
-        return Subscription(
-            user_id = self.user_id,
-            subscription_plan_id = self.subscription_plan_id,
-            subscription_code = self.subscription_code,
-            start_at = datetime.now(timezone.utc),
-            end_at = datetime.now(timezone.utc) + timedelta(days=self.plan.days),
-        )
-    
     @property
     def is_active(self):
-        if self.end_at.tzinfo is None:
-            end_at_aware = self.end_at.replace(tzinfo=timezone.utc)
+        if self.subscription_end_at.tzinfo is None:
+            end_at_aware = self.subscription_end_at.replace(tzinfo=timezone.utc)
         else:
-            end_at_aware = self.end_at
+            end_at_aware = self.subscription_end_at
         return datetime.now(timezone.utc) < end_at_aware
-        
-    def __str__(self):
-        return f"{self.user.first_name} for: {self.plan.name} from: {self.start_at.isoformat()} to: {self.end_at.isoformat()}"

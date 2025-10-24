@@ -3,7 +3,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from api import timedelta
-from models import BillingInterval, Permission, PlanStatus,SubscriptionPlan, User, Payment, Subscription
+from models import BillingInterval, Permission, PlanStatus,SubscriptionPlan, User, Payment
 from utils import create_paystack_subscription_plan, get_paystack_plans, get_db
 from config import logger, permissions, subscription_plans, get_settings
 
@@ -42,6 +42,7 @@ def create_default_admin_user(db:Session):
         "event": "charge.success",
         "data": {
             "id": 0000000,
+            "subscription_code": "SUB0000000",
             "customer": {"email": admin_user.email},
             "plan": {"plan_code": annual_plan.plan_code},
             "amount": annual_plan.price,
@@ -50,20 +51,14 @@ def create_default_admin_user(db:Session):
     }
     trump_payment = db.execute(select(Payment).where(Payment.transaction_id == payment_payload.get("data").get("id"))).scalar_one_or_none()
     if not trump_payment:
-        trump_payment = Payment.create_from_paystack_response(admin_user.id, data=payment_payload.get("data"))
+        data = payment_payload.get("data")
+        data["subscription_plan_id"] = annual_plan.id
+        data["subscription_start_at"] = datetime.now(timezone.utc)
+        data["subscription_end_at"] = datetime.now(timezone.utc) + timedelta(days=730) # two years
+        trump_payment = Payment.create_from_paystack_response(admin_user.id, data=data)
         db.add(trump_payment)
         db.commit()
         db.refresh(trump_payment)
-    forever_subscription = db.execute(select(Subscription).where(Subscription.user_id == admin_user.id, Subscription.subscription_plan_id == annual_plan.id, Subscription.end_at > func.now())).scalar_one_or_none()
-    if not forever_subscription:
-        forever_subscription = Subscription()
-        forever_subscription.user_id = admin_user.id
-        forever_subscription.subscription_plan_id = annual_plan.id
-        forever_subscription.subscription_code = "SUB0000000"
-        forever_subscription.start_at = datetime.now(timezone.utc)
-        forever_subscription.end_at = datetime.now(timezone.utc) + timedelta(days=730) # two years
-        db.add(forever_subscription)
-        db.commit()
     logger.info("Admin User ADDED")
 
 
