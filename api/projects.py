@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Any, Dict, List
 
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+from models.subscriptions import Payment
 from utils import get_obj_or_404, paginate, require_subscription
 from schemas import FieldResponse
 from utils import get_db, get_query_params, require_scope, InvoiceExtractor
@@ -162,6 +164,12 @@ async def process(
     for receipt in project.receipts:
         if receipt.status in ["pending", "completed","failed"]:
             receipt.process(db=db,extractor=extractor, fields=fields)
+            # payment: Payment | None = db.execute(select(Payment).where(
+            #                             Payment.user_id == current_user.id,
+            #                             Payment.subscription_end_at > func.now()  # Check if subscription is active
+            #                         )).scalar_one_or_none()
+            # payment.invoices_processed += 1
+            # db.commit()
     params["project_id"] = project.id
     return await paginate(
         db=db,

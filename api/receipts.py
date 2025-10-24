@@ -2,9 +2,11 @@ import io
 from typing import Any, Dict
 from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from models import DataValue, User, Project, Receipt
+from models.subscriptions import Payment
 from schemas import DataValueResponse, ReceiptResponse, ReceiptUpdate, ListResponse
 from schemas.data import DataValueUpdate, DataValueCreate
 from schemas.fields import FieldResponse
@@ -209,6 +211,9 @@ async def process_receipt(
     fields = [FieldResponse.model_validate(field).model_dump() for field in project.fields if not field.parent]
     receipt.process(db=db,extractor=extractor, fields=fields)
     db.refresh(receipt)
+    payment: Payment | None = db.execute(select(Payment).where(Payment.user_id == current_user.id,Payment.subscription_end_at > func.now())).scalar_one_or_none()
+    payment.invoices_processed += 1
+    db.commit()
     return receipt
 
 @router.delete("/{receipt_id}/", status_code=status.HTTP_204_NO_CONTENT)

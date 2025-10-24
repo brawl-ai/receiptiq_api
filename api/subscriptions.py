@@ -30,6 +30,30 @@ async def list_plans(
         db=db, model=SubscriptionPlan, schema=SubscriptionPlanResponse, **params
     )
 
+@router.post("/start_free_trial", response_model=PaymentResponse)
+async def start_free_trial(start_payment_request: StartPaymentPayload, auth: Tuple[User, str] = Depends(get_current_active_verified_user),db: Session = Depends(get_db)):
+    plan: SubscriptionPlan | None = db.execute(select(SubscriptionPlan).where(SubscriptionPlan.id == start_payment_request.plan_id)).scalar_one_or_none()
+    if not plan:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail={"message": f"Subscription plan {start_payment_request.plan_id} not found"})
+    user,_ = auth
+    free_payment = db.execute(select(Payment).where(Payment.subscription_plan_id == plan.id, Payment.user_id == user.id)).scalar_one_or_none()
+    if not free_payment:
+        data = {
+            "id": 0000000,
+            "subscription_plan_id": plan.id,
+            "subscription_start_at": datetime.now(timezone.utc),
+            "subscription_end_at": datetime.now(timezone.utc) + timedelta(days=plan.days), # two years
+            "subscription_code": "SUB0000000",
+            "customer": {"email": user.email},
+            "plan": {"plan_code": plan.plan_code},
+            "amount": plan.price,
+            "status": "success"
+        }
+        free_payment = Payment.create_from_paystack_response(user.id, data=data)
+        db.add(free_payment)
+        db.commit()
+        db.refresh(free_payment)
+    return free_payment
 
 @router.post("/payments/start", response_model=Dict)
 async def start_payment(
@@ -140,7 +164,6 @@ async def complete_payment(request: Request, db: Session = Depends(get_db)):
             """
             logger.warning(f"User: {user.email} payment failed for invoice: {data['invoice_code']} status: {data['status']}")
 
-
         case "invoice.update":
             """
                 Sent after the charge attempt and will contain the final status of the invoice for this subscription payment, as well as information on the charge if it was successful
@@ -155,7 +178,6 @@ async def complete_payment(request: Request, db: Session = Depends(get_db)):
                 TODO: Email user of the end date of benefits
             """
             logger.warning(f"User: {user.email} cancelled subscription: {data['subscription_code']}")
-
 
         case "subscription.disable":
             """

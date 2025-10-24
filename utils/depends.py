@@ -138,10 +138,16 @@ def require_subscription(required_scope: str):
                                         Payment.user_id == scoped_user.id,
                                         Payment.subscription_end_at > func.now()  # Check if subscription is active
                                     )).scalar_one_or_none()
+        print(payment.plan.invoice_limits, payment.invoices_processed)
         if not payment:
             raise HTTPException(
                 status_code=status.HTTP_402_PAYMENT_REQUIRED,
                 detail=f"You do not have an active subscription"
+            )
+        elif payment.plan.invoice_limits <= payment.invoices_processed:
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail=f"You have exceeded your invoices quota"
             )
         return scoped_user
 

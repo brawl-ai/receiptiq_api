@@ -224,8 +224,8 @@ async def get_google_access_token(code: str) -> Dict:
         "grant_type": "authorization_code",
     }
     token_response = requests.post(token_url, data=token_data)
-    if response.ok:
-        return response.json()
+    if token_response.ok:
+        return token_response.json()
     else:
         raise Exception(response.text)
 
