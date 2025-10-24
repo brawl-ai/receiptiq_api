@@ -39,13 +39,13 @@ class StartPaymentPayload(BaseModel):
     email: EmailStr
 
 
-class SubscriptionResponse(BaseModel):
+class PaymentResponse(BaseModel):
     id: UUID
     is_active: bool
     plan: SubscriptionPlanResponse
     subscription_code: str
-    start_at: datetime
-    end_at: datetime
+    subscription_start_at: datetime
+    subscription_end_at: datetime
     created_at: datetime
     updated_at: Optional[datetime] = None
     
