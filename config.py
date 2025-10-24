@@ -75,8 +75,23 @@ permissions = [
 ]
 
 subscription_plans = [
-    ('Launch Monthly', 'For freelancers & small teams — up to 1,000 invoices/month', 19.00, "USD", "monthly", 0, "ACTIVE"),
-    ('Launch Annual', 'For freelancers & small teams — up to 1,000 invoices/month', 180.00, "USD", "annually", 0, "ACTIVE")
+    ('Free Trial', 'Get a taste of ReceiptIQ - up to 1,000 invoices/month', 0.00, "USD", "monthly", 30, "ACTIVE", [
+        "Up to 1,000 invoices/month",
+        "1 project",
+        "Custom Schema"
+    ],1000),
+    ('Pro Monthly', 'For freelancers & small teams — up to 5,000 invoices/month', 5.00, "USD", "monthly", 0, "ACTIVE", [
+        "Everything in Free Trial",
+        "5,000 invoices/month",
+        "Unlimited projects",
+        "24/7 email support",
+    ],5000),
+    ('Pro Annual', 'For freelancers & small teams — up to 5,000 invoices/month', 50.00, "USD", "annually", 0, "ACTIVE",[
+        "Everything in Free Trial",
+        "5,000 invoices/month",
+        "Unlimited projects",
+        "24/7 email support",
+    ],5000)
 ]
 
 def get_settings():

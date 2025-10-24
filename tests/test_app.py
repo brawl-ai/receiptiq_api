@@ -59,7 +59,8 @@ def add_subscription(db: Session, user: User):
         description="Pro", 
         plan_code="pro-code",
         price=1000, 
-        currency="KES"
+        currency="KES",
+        invoice_limits=1000
     )
     db.add(plan)
     db.commit()

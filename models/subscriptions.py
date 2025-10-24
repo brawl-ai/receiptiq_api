@@ -54,6 +54,8 @@ class SubscriptionPlan(Model):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, unique=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
+    benefits: Mapped[Optional[str]] = mapped_column(Text)
+    invoice_limits: Mapped[int] = mapped_column(Integer,default=0)
     plan_code: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     price: Mapped[decimal.Decimal] = mapped_column(Float(precision=10, decimal_return_scale=2), nullable=False)
     currency: Mapped[str] = mapped_column(Enum(CurrencyType), default=CurrencyType.USD)  # ISO 4217 currency code
@@ -100,6 +102,7 @@ class Payment(Model):
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
     subscription_start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     subscription_end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    invoices_processed: Mapped[int] = mapped_column(Integer,default=0)
     channel: Mapped[Optional[PaymentChannel]] = mapped_column(Enum(PaymentChannel), default=PaymentChannel.CARD)
     currency: Mapped[CurrencyType] = mapped_column(Enum(CurrencyType), default=CurrencyType.USD)
     ip_address: Mapped[Optional[str]] = mapped_column(String(45))  # Support IPv6
