@@ -74,8 +74,8 @@ class UserSubscription(BaseModel):
     id: UUID
     is_active: bool
     subscription_plan_id: UUID
-    start_at: datetime
-    end_at: datetime
+    subscription_start_at: datetime
+    subscription_end_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
