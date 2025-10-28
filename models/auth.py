@@ -189,7 +189,7 @@ class User(Model):
     def is_subscribed(self):
         """Check if user has any active subscriptions"""
         now = datetime.datetime.now(datetime.timezone.utc)
-        return any([sub.end_at > now for sub in self.subscriptions])
+        return any([sub.subscription_end_at > now for sub in self.subscriptions])
 
     def __str__(self):
         return f"{self.first_name} - {self.email}"
