@@ -4,7 +4,6 @@ import re
 import secrets
 import subprocess
 from typing import Dict, List, Tuple, Optional
-from urllib import response
 from fastapi import HTTPException, Request, UploadFile
 from pathlib import Path
 import requests
@@ -225,9 +224,10 @@ async def get_google_access_token(code: str) -> Dict:
     }
     token_response = requests.post(token_url, data=token_data)
     if token_response.ok:
-        return token_response.json()
+        response_json = token_response.json()
+        return response_json["access_token"]
     else:
-        raise Exception(response.text)
+        raise Exception(token_response.text)
 
 
 def get_git_commit_hash():
