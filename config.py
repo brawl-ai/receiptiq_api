@@ -1,4 +1,3 @@
-from functools import lru_cache
 import logging
 from pydantic_settings import BaseSettings
 
@@ -86,7 +85,7 @@ subscription_plans = [
         "Unlimited projects",
         "24/7 email support",
     ],5000),
-    ('Pro Annual', 'For freelancers & small teams — up to 5,000 invoices/month', 50.00, "USD", "annually", 0, "ACTIVE",[
+    ('Pro Annual', 'For freelancers & small teams — up to 5,000 invoices/month', 48.00, "USD", "annually", 0, "ACTIVE",[
         "Everything in Free Trial",
         "5,000 invoices/month",
         "Unlimited projects",

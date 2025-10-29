@@ -20,7 +20,8 @@ async def test_list_subscription_plans(client, db):
         description="Pro", 
         plan_code="pro-code",
         price=1000, 
-        currency="KES"
+        currency="KES",
+        benefits="benefit1$benefit2"
     )
     db.add(plan)
     db.commit()

@@ -534,7 +534,7 @@ async def update_user_profile(update_payload: UserUpdate,current_user: User = De
     current_user.first_name = update_payload.first_name if update_payload.first_name else current_user.first_name
     current_user.last_name = update_payload.last_name if update_payload.last_name else current_user.last_name
     current_user.is_active = update_payload.is_active if update_payload.is_active else current_user.is_active
-    if update_payload.email:
+    if update_payload.email and update_payload.email.lower() != current_user.email.lower():
         current_user.email = update_payload.email
         current_user.is_verified = False
     db.add(current_user)
@@ -644,7 +644,6 @@ async def google_callback(request: Request, google_callback_data: GoogleCallback
         db.add(user)
         db.commit()
         db.refresh(user)
-        print(user.scopes)
     record_login_attempt(
         http_request=request,
         email=email, 
