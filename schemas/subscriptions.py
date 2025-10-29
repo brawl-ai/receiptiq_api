@@ -22,7 +22,8 @@ class SubscriptionPlanCreate(BaseModel):
 class SubscriptionPlanResponse(BaseModel):
     name: str
     description: str
-    price: Decimal
+    benefits: str
+    price: float
     currency: CurrencyType
     billing_interval: BillingInterval
     trial_period_days: int
