@@ -64,12 +64,15 @@ def create_default_admin_user(db:Session):
 
 def create_subscription_plans(db: Session):
     for (name,descr,price,currency,billing_interval,trial_period_days,status,benefits,invoice_limits) in subscription_plans:
-        
         paystack_plan = get_first_or_none(get_paystack_plans(), lambda p: p["name"] == name and not p["is_deleted"])
         if not paystack_plan:
             paystack_plan = create_paystack_subscription_plan(name=name, interval=billing_interval, amount=price if trial_period_days == 0 else 1.00, currency=currency)
         
-        db_plan = db.execute(select(SubscriptionPlan).where(SubscriptionPlan.billing_interval == BillingInterval(billing_interval), SubscriptionPlan.status == PlanStatus.ACTIVE)).scalar_one_or_none()
+        db_plan = db.execute(select(SubscriptionPlan).where(
+            SubscriptionPlan.name == name,
+            SubscriptionPlan.billing_interval == BillingInterval(billing_interval), 
+            SubscriptionPlan.status == PlanStatus.ACTIVE
+        )).scalar_one_or_none()
         if not db_plan:
             db_plan = SubscriptionPlan(
                 name=name,
