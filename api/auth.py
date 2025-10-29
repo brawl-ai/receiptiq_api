@@ -618,9 +618,9 @@ async def google_login(request: Request, _ = Depends(get_app)):
         raise e
 
 @router.post("/google/callback")
-async def google_callback(request: Request, google_callback: GoogleCallback, db: Session = Depends(get_db), _ = Depends(get_app)):
+async def google_callback(request: Request, google_callback_data: GoogleCallback, db: Session = Depends(get_db), _ = Depends(get_app)):
     # Exchange authorization code for google access token
-    google_access_code = (await get_google_access_token(code=google_callback.code)).get("access_code")
+    google_access_code = await get_google_access_token(code=google_callback_data.code)
     # fetch google user email
     user_info = await get_google_userinfo(access_token=google_access_code)
     # get or create user
@@ -628,27 +628,35 @@ async def google_callback(request: Request, google_callback: GoogleCallback, db:
     first_name = user_info.get("given_name") or user_info.get("name")
     last_name = user_info.get("family_name") or user_info.get("name")
     user: User | None = db.execute(select(User).where(User.email == email)).scalars().first()
+    normal_user_permissions = db.execute(select(Permission).where(Permission.codename != "admin")).scalars()
     if not user:
         user = User(
             first_name=first_name,
             last_name=last_name,
-            email=email
+            email=email,
+            is_active=True,
+            is_verified=True,
         )
         user.set_password(secrets.token_urlsafe(10))
+        for perm in normal_user_permissions:
+            if perm not in user.scopes:
+                user.scopes.append(perm)
         db.add(user)
         db.commit()
         db.refresh(user)
+        print(user.scopes)
     record_login_attempt(
         http_request=request,
         email=email, 
         success=True, 
         db=db
     )
+    user_scopes = [scope.codename for scope in user.scopes]
     access_token = user.create_jwt_token(
         secret=settings.secret_key,
         algorithm=settings.algorithm,
         expiry_seconds=settings.access_token_expiry_seconds,
-        granted_scopes="read:profile"
+        granted_scopes=user_scopes
     )
     response = JSONResponse(content={"success": True})
     response.set_cookie(
@@ -661,13 +669,15 @@ async def google_callback(request: Request, google_callback: GoogleCallback, db:
         path="/",
         domain=".receiptiq.co" if settings.environment == "production" else None
     )
+    refresh_token_age_seconds = 60*60*24*30 if google_callback_data.remember_me else 3600 # token is valid for 1hr if you don't ask to be remembered
+    refresh_token = user.create_refresh_token(db)
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
         secure=True,
         samesite="strict",
-        max_age=60*60*24*30,
+        max_age=refresh_token_age_seconds,
         path="/",
         domain=".receiptiq.co" if settings.environment == "production" else None
     )
