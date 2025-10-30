@@ -27,6 +27,7 @@ class ReceiptData(BaseModel):
     width: int
     height: int
     field: ReceiptField
+    row: Optional[int] = 0
 
     model_config = ConfigDict(from_attributes=True)
 

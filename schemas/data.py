@@ -17,6 +17,7 @@ class DataValueResponse(BaseModel):
     value: str = Field(..., description="The actual value stored in a flexible format")
     x: int
     y: int
+    row: Optional[int] = 0
     width: int
     height: int
     field: FieldResponse
