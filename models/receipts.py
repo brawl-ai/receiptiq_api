@@ -58,7 +58,7 @@ class Receipt(Model):
                 db.refresh(data_value)
             else:
                 if isinstance(value, list):
-                    for id,item in enumerate(value):
+                    for id,item in enumerate(value, start=1):
                         self.add_data(db, item, row_id=id)
                 else:
                     self.add_data(db, value)
@@ -74,7 +74,6 @@ class Receipt(Model):
                 fields=fields,
                 file_type=self.mime_type
             )
-            # print(result)
             self.status = "processing"
             db.add(self)
             db.flush()

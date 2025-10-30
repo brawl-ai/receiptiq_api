@@ -75,7 +75,7 @@ async def get_project_data(
     return receipt_data
 
 def save_csv(project: Project):
-    path: str = f"temp/{project.name}_{project.id}.csv"
+    path: str = f"{project.id}.csv"
     data = []
     for receipt in project.receipts:
         row = {
